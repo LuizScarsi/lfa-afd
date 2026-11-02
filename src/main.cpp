@@ -1,11 +1,10 @@
 #include "../include/Automato.h"
 #include "../include/LeitorArquivo.h"
-#include "../include/LeitorGramatica.h"
 #include "../include/Determinizar.h"
-#include "../include/CompletarAutomato.h"
 #include "../include/Minimizar.h"
-#include "../include/Reconhecer.h"
+#include "../include/CompletarAutomato.h"
 #include "../include/VerificarEstados.h"
+#include "../include/Reconhecer.h"
 
 #include <iostream>
 #include <string>
@@ -13,72 +12,130 @@
 
 using namespace std;
 
-int main() {
+void imprimirCabecalho() {
+    cout << "====================================================================\n";
+    cout << "         UNIVERSIDADE FEDERAL DA FRONTEIRA SUL (UFFS)               \n";
+    cout << "             CCR: Linguagens Formais e Automatos                    \n";
+    cout << "               Professor: Braulio Mello                             \n";
+    cout << "====================================================================\n";
+    cout << " PROJETO: Gerador de AFD Minimo (Sem Classes de Equivalencia),      \n";
+    cout << "          Livre de Estados Inalcancaveis e Mortos, com Estado Erro  \n";
+    cout << "====================================================================\n\n";
+}
+
+int main(int argc, char* argv[]) {
+    imprimirCabecalho();
+
+    string caminhoArquivo = "exemplos/professor.txt";
+    if (argc > 1) {
+        caminhoArquivo = argv[1];
+    }
+
+    cout << "Arquivo de entrada selecionado: " << caminhoArquivo << "\n\n";
+
+    // =====================================================================
+    // ETAPA 1: Carga do Arquivo Fonte e Geracao do AFND
+    // =====================================================================
+    cout << "--------------------------------------------------------------------\n";
+    cout << "[ETAPA 1] Carga de Tokens e Gramatica Regular -> Construcao do AFND\n";
+    cout << "--------------------------------------------------------------------\n";
+    cout << "- Compartilhamento exclusivo do estado inicial S entre tokens e GR.\n";
+    cout << "- Transicoes exclusivas para cada novo simbolo/token na carga.\n";
+
     Automato afnd;
-
-    int inicial = afnd.adicionarEstado();
-    afnd.definirEstadoInicial(inicial);
-
-    if (!carregarTokens("exemplos/entrada.txt", afnd, inicial)) {
-        return 1;
+    if (!carregarArquivo(caminhoArquivo, afnd, "variavel")) {
+        // Tenta caminho alternativo de exemplo se nao encontrar
+        caminhoArquivo = "exemplos/entrada.txt";
+        cout << "Tentando carregar arquivo alternativo: " << caminhoArquivo << "...\n";
+        if (!carregarArquivo(caminhoArquivo, afnd, "variavel")) {
+            cerr << "Falha ao carregar arquivo de entrada. Encerrando aplicacao.\n";
+            return 1;
+        }
     }
 
-    if (!carregarGramaticaRegular(
-            "exemplos/entrada.txt",
-            afnd,
-            inicial)) {
-        return 1;
-    }
+    afnd.imprimirTabela("AFND Inicial (Apos Carga)");
 
-    cout << "\n========== AFND ==========\n";
-    afnd.imprimir();
+    // =====================================================================
+    // ETAPA 2: Determinizacao (AFND -> AFD)
+    // =====================================================================
+    cout << "\n--------------------------------------------------------------------\n";
+    cout << "[ETAPA 2] Teorema de Determinizacao (Construcao de Subconjuntos)\n";
+    cout << "--------------------------------------------------------------------\n";
+    cout << "- Mapeamento de subconjuntos de estados do AFND em estados do AFD.\n";
+    cout << "- Resolucao de indeterminismos e heranca dos rotulos de tokens.\n";
 
-    cout << "\n========== DETERMINIZACAO ==========\n";
     Automato afd = determinizar(afnd);
+    afd.imprimirTabela("AFD Determinado (Antes da Minimizacao)");
 
-    completarAFD(afd);
+    // =====================================================================
+    // ETAPA 3: Minimizacao SEM Classes de Equivalencia
+    // =====================================================================
+    cout << "\n--------------------------------------------------------------------\n";
+    cout << "[ETAPA 3] Minimizacao Sem Classes de Equivalencia\n";
+    cout << "--------------------------------------------------------------------\n";
+    cout << "- Conforme o enunciado: Minimo sem aplicacao de classes de equivalencia.\n";
+    cout << "- Elimina exclusivamente estados inalcancaveis e estados mortos.\n";
 
-    cout << "\n========== AFD MINIMIZADO ==========\n";
-    Automato minimizado = minimizarAFD(afd);
-    minimizado.imprimir();
+    Automato afdMinimizado = minimizarAFD(afd);
+    afdMinimizado.imprimirTabela("AFD Minimizado (Livre de Inalcancaveis e Mortos)");
 
-    // Verifica o resultado da minimizacao.
-    verificarEstados(minimizado);
+    // =====================================================================
+    // ETAPA 4: Estado de Erro e Completude do AFD
+    // =====================================================================
+    cout << "\n--------------------------------------------------------------------\n";
+    cout << "[ETAPA 4] Adicao do Estado de Erro ao Final da Minimizacao\n";
+    cout << "--------------------------------------------------------------------\n";
+    cout << "- Acrescenta o estado de erro como ultimo estado.\n";
+    cout << "- Celulas nao mapeadas do AFD sao preenchidas com o estado de erro.\n";
+    cout << "- Transicoes a partir do estado de erro permanecem nele mesmo.\n";
 
-    // Remove estados desnecessarios, preservando o estado de erro.
-    Automato afdFinal = removerEstadosInuteis(minimizado);
+    Automato afdFinal = afdMinimizado;
+    completarAFD(afdFinal);
 
-    cout << "\n========== AFD FINAL ==========\n";
-    afdFinal.imprimir();
+    afdFinal.imprimirTabela("AFD Final Completo (Com Estado de Erro)");
 
+    // Relatorio de confirmacao estrutural
     verificarEstados(afdFinal);
 
-    // Testa palavras no AFD final.
-    cout << "\n========== TESTE DE PALAVRAS ==========\n";
+    // =====================================================================
+    // ETAPA 5: Reconhecimento Interativo de Sentencas / Palavras
+    // =====================================================================
+    cout << "\n====================================================================\n";
+    cout << "[ETAPA 5] Simulador de Reconhecimento de Sentencas\n";
+    cout << "====================================================================\n";
+    cout << "Digite palavras para testar no AFD final.\n";
+    cout << "Exemplos sugeridos: 'se', 'entao', 'senao', 'a', 'aeiou', 'sen', 'xyz'\n";
+    cout << "Digite 'sair' para encerrar o programa.\n";
 
     string palavra;
-
     while (true) {
-        cout << "\nDigite uma palavra (ou 'sair' para encerrar): ";
-        getline(cin, palavra);
-
-        if (palavra == "sair") {
+        cout << "\nEntrada > ";
+        if (!getline(cin, palavra)) {
             break;
         }
 
-        vector<string> identificacoes;
+        if (palavra == "sair" || palavra == "exit" || palavra == "fim") {
+            cout << "Encerrando simulador.\n";
+            break;
+        }
 
-        if (reconhecer(afdFinal, palavra, identificacoes)) {
-            cout << "Palavra reconhecida!\n";
-            cout << "Identificacao: ";
+        if (palavra.empty()) {
+            cout << "(Palavra vazia)\n";
+        }
 
-            for (const string& token : identificacoes) {
-                cout << token << " ";
+        vector<string> tokensReconhecidos;
+        string rastro;
+        bool aceita = reconhecerComRastro(afdFinal, palavra, tokensReconhecidos, rastro);
+
+        cout << "Caminho percorrido: " << rastro << "\n";
+        if (aceita) {
+            cout << "STATUS: [ACEITA] -> ";
+            for (size_t i = 0; i < tokensReconhecidos.size(); ++i) {
+                cout << (i > 0 ? ", " : "") << tokensReconhecidos[i];
             }
-
             cout << "\n";
         } else {
-            cout << "Palavra nao reconhecida!\n";
+            cout << "STATUS: [REJEITADA]\n";
         }
     }
 

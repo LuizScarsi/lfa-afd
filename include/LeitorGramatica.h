@@ -2,6 +2,9 @@
 #define LEITOR_GRAMATICA_H
 
 #include "Automato.h"
+#include <string>
+
+using namespace std;
 
 bool carregarGramaticaRegular(
     const string& caminho,

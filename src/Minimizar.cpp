@@ -1,166 +1,155 @@
 #include "../include/Minimizar.h"
 
-#include <algorithm>
-#include <set>
+#include <iostream>
+#include <queue>
 #include <vector>
 
 using namespace std;
 
-bool mesmosTokens(const Estado& a, const Estado& b) {
-    set<string> tokensA(a.tokens.begin(), a.tokens.end());
-    set<string> tokensB(b.tokens.begin(), b.tokens.end());
-
-    return tokensA == tokensB;
-}
-
-int encontrarDestino(
-    const Automato& afd,
-    int estado,
-    char simbolo
-) {
-    for (const Transicao& t : afd.getTransicoes()) {
-        if (t.origem == estado &&
-            !t.epsilon &&
-            t.simbolo == simbolo) {
-            return t.destino;
-        }
-    }
-
-    return -1;
-}
-
-bool estaMarcado(
-    const vector<vector<bool>>& tabela,
-    int a,
-    int b
-) {
-    if (a == b) {
-        return false;
-    }
-
-    if (a > b) {
-        swap(a, b);
-    }
-
-    return tabela[a][b];
-}
-
 Automato minimizarAFD(const Automato& afd) {
     const vector<Estado>& estados = afd.getEstados();
+    const vector<Transicao>& transicoes = afd.getTransicoes();
+    int total = static_cast<int>(estados.size());
+    int inicial = afd.getEstadoInicial();
 
-    int n = static_cast<int>(estados.size());
+    cout << "\n--- Processo de Minimizacao (Sem Classes de Equivalencia) ---\n";
+    cout << "Objetivo: Eliminar estados inalcancaveis e estados mortos.\n";
 
-    vector<vector<bool>> tabela(n, vector<bool>(n, false));
+    // 1. Identificar estados alcancaveis a partir do estado inicial (BFS direta)
+    vector<bool> alcancavel(total, false);
+    if (inicial >= 0 && inicial < total) {
+        queue<int> fila;
+        alcancavel[inicial] = true;
+        fila.push(inicial);
 
-    // Estados finais e nao finais sao distinguiveis.
-    // Tambem preservamos as identificacoes dos tokens.
-    for (int i = 0; i < n; i++) {
-        for (int j = i + 1; j < n; j++) {
-            if (estados[i].final != estados[j].final ||
-                !mesmosTokens(estados[i], estados[j])) {
-                tabela[i][j] = true;
-            }
-        }
-    }
+        while (!fila.empty()) {
+            int atual = fila.front();
+            fila.pop();
 
-    bool houveMudanca = true;
-
-    while (houveMudanca) {
-        houveMudanca = false;
-
-        for (int i = 0; i < n; i++) {
-            for (int j = i + 1; j < n; j++) {
-                if (tabela[i][j]) {
-                    continue;
-                }
-
-                for (char simbolo : afd.getAlfabeto()) {
-                    int destinoA = encontrarDestino(afd, i, simbolo);
-                    int destinoB = encontrarDestino(afd, j, simbolo);
-
-                    if (destinoA != destinoB &&
-                        (destinoA == -1 ||
-                         destinoB == -1 ||
-                         estaMarcado(tabela, destinoA, destinoB))) {
-
-                        tabela[i][j] = true;
-                        houveMudanca = true;
-                        break;
-                    }
+            for (const Transicao& t : transicoes) {
+                if (t.origem == atual && !alcancavel[t.destino]) {
+                    alcancavel[t.destino] = true;
+                    fila.push(t.destino);
                 }
             }
         }
     }
 
+    // 2. Identificar estados vivos que alcancam ao menos um estado final (BFS reversa)
+    vector<bool> alcancaFinal(total, false);
+    vector<vector<int>> transicoesReversas(total);
+    queue<int> filaRev;
+
+    for (const Transicao& t : transicoes) {
+        transicoesReversas[t.destino].push_back(t.origem);
+    }
+
+    for (int i = 0; i < total; ++i) {
+        if (estados[i].final) {
+            alcancaFinal[i] = true;
+            filaRev.push(i);
+        }
+    }
+
+    while (!filaRev.empty()) {
+        int atual = filaRev.front();
+        filaRev.pop();
+
+        for (int anterior : transicoesReversas[atual]) {
+            if (!alcancaFinal[anterior]) {
+                alcancaFinal[anterior] = true;
+                filaRev.push(anterior);
+            }
+        }
+    }
+
+    // 3. Relatorio de diagnostico
+    cout << "\nDiagnostico dos Estados:\n";
+    vector<int> inalcancaveis;
+    vector<int> mortos;
+    vector<bool> manter(total, false);
+
+    for (int i = 0; i < total; ++i) {
+        bool ok = true;
+        if (!alcancavel[i]) {
+            inalcancaveis.push_back(i);
+            ok = false;
+        } else if (!alcancaFinal[i] && i != inicial) {
+            mortos.push_back(i);
+            ok = false;
+        }
+
+        if (ok) {
+            manter[i] = true;
+        }
+    }
+
+    cout << "  - Estados Alcancaveis: ";
+    for (int i = 0; i < total; ++i) {
+        if (alcancavel[i]) cout << estados[i].nome << " ";
+    }
+    cout << "\n";
+
+    cout << "  - Estados Inalcancaveis: ";
+    if (inalcancaveis.empty()) cout << "Nenhum";
+    else {
+        for (int id : inalcancaveis) cout << estados[id].nome << " ";
+    }
+    cout << "\n";
+
+    cout << "  - Estados Vivos (alcancam final): ";
+    for (int i = 0; i < total; ++i) {
+        if (alcancaFinal[i]) cout << estados[i].nome << " ";
+    }
+    cout << "\n";
+
+    cout << "  - Estados Mortos: ";
+    if (mortos.empty()) cout << "Nenhum";
+    else {
+        for (int id : mortos) cout << estados[id].nome << " ";
+    }
+    cout << "\n";
+
+    // 4. Construcao do AFD Minimizado (renumerado e livre de inuteis)
     Automato minimizado;
+    vector<int> mapeamento(total, -1);
+    int contadorNovo = 0;
 
-    vector<int> novoEstado(n, -1);
-    vector<int> representantes;
-
-    // Cria um estado para cada grupo de estados equivalentes.
-    for (int i = 0; i < n; i++) {
-        int equivalente = -1;
-
-        for (int j = 0; j < i; j++) {
-            if (!estaMarcado(tabela, j, i)) {
-                equivalente = j;
-                break;
-            }
-        }
-
-        if (equivalente != -1) {
-            novoEstado[i] = novoEstado[equivalente];
-        } else {
-            int id = minimizado.adicionarEstado();
-
-            novoEstado[i] = id;
-            representantes.push_back(i);
+    for (int i = 0; i < total; ++i) {
+        if (manter[i]) {
+            string novoNome = "M" + to_string(contadorNovo++);
+            int novoId = minimizado.adicionarEstado(novoNome);
+            mapeamento[i] = novoId;
 
             if (estados[i].final) {
-                minimizado.marcarFinal(id);
-
-                for (const string& token : estados[i].tokens) {
-                    minimizado.marcarFinal(id, token);
+                minimizado.marcarFinal(novoId);
+                for (const string& tok : estados[i].tokens) {
+                    minimizado.marcarFinal(novoId, tok);
                 }
             }
         }
     }
 
-    minimizado.definirEstadoInicial(
-        novoEstado[afd.getEstadoInicial()]
-    );
-
-    // Preserva a identificacao do estado de erro apos a minimizacao.
-    int erroAntigo = afd.getEstadoErro();
-
-    if (erroAntigo != -1) {
-        minimizado.definirEstadoErro(novoEstado[erroAntigo]);
+    if (inicial >= 0 && inicial < total && mapeamento[inicial] != -1) {
+        minimizado.definirEstadoInicial(mapeamento[inicial]);
     }
 
-    // Copia as transicoes usando os novos IDs.
-    for (int representante : representantes) {
-        int origemNova = novoEstado[representante];
-
-        for (const Transicao& t : afd.getTransicoes()) {
-            if (t.origem != representante) {
-                continue;
-            }
-
-            int destinoNovo = novoEstado[t.destino];
-
-            if (t.epsilon) {
-                minimizado.adicionarTransicaoEpsilon(
-                    origemNova,
-                    destinoNovo
-                );
-            } else {
-                minimizado.adicionarTransicao(
-                    origemNova,
-                    t.simbolo,
-                    destinoNovo
-                );
-            }
+    // Copia as transicoes validas
+    for (const Transicao& t : transicoes) {
+        if (manter[t.origem] && manter[t.destino]) {
+            minimizado.adicionarTransicao(
+                mapeamento[t.origem],
+                t.simbolo,
+                mapeamento[t.destino]
+            );
         }
+    }
+
+    if (inalcancaveis.empty() && mortos.empty()) {
+        cout << "Resultado: O AFD ja se encontrava livre de estados inalcancaveis e mortos.\n";
+    } else {
+        cout << "Resultado: " << (inalcancaveis.size() + mortos.size()) 
+             << " estado(s) inutil(eis) removido(s) com sucesso.\n";
     }
 
     return minimizado;
