@@ -1,34 +1,24 @@
 #include "../include/Automato.h"
+#include "../include/LeitorArquivo.h"
 
 #include <iostream>
+
+using namespace std;
 
 int main() {
     Automato afnd;
 
-    // Criando o estado inicial
-    int q0 = afnd.adicionarEstado();
+    // Cria o estado inicial compartilhado
+    int inicial = afnd.adicionarEstado();
 
-    afnd.definirEstadoInicial(q0);
+    afnd.definirEstadoInicial(inicial);
 
-    // Token "ab"
-    int q1 = afnd.adicionarEstado();
-    int q2 = afnd.adicionarEstado();
+    // Carrega os tokens do arquivo
+    if (!carregarTokens("exemplos/entrada.txt", afnd, inicial)) {
+        return 1;
+    }
 
-    afnd.adicionarTransicao(q0, 'a', q1);
-    afnd.adicionarTransicao(q1, 'b', q2);
-
-    afnd.marcarFinal(q2, "AB");
-
-    // Token "ac"
-    int q3 = afnd.adicionarEstado();
-    int q4 = afnd.adicionarEstado();
-
-    afnd.adicionarTransicao(q0, 'a', q3);
-    afnd.adicionarTransicao(q3, 'c', q4);
-
-    afnd.marcarFinal(q4, "AC");
-
-    // Exibindo o automato
+    // Exibe o resultado
     afnd.imprimir();
 
     return 0;

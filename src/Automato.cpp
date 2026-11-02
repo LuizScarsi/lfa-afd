@@ -92,6 +92,10 @@ void Automato::imprimir() {
 
         if (estado.final) {
             cout << " (Final)";
+
+            for (const string& token : estado.tokens) {
+                cout << " [" << token << "]";
+            }
         }
 
         cout << "\n";
