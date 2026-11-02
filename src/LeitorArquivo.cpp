@@ -17,11 +17,32 @@ bool carregarTokens(
         return false;
     }
 
-    string token;
+    string linha;
+    bool lerTokens = false;
+    bool possuiSecoes = false;
 
-    while (getline(arquivo, token)) {
+    while (getline(arquivo, linha)) {
 
-        // Remove espaços no inicio e no final
+        // Identifica as secoes do arquivo
+        if (linha == "[TOKENS]") {
+            lerTokens = true;
+            possuiSecoes = true;
+            continue;
+        }
+
+        if (linha == "[GRAMATICA]") {
+            lerTokens = false;
+            possuiSecoes = true;
+            continue;
+        }
+
+        // Sem secoes, considera todas as linhas como tokens
+        if (possuiSecoes && !lerTokens) {
+            continue;
+        }
+
+        string token = linha;
+
         size_t inicio = token.find_first_not_of(" \t\r");
 
         if (inicio == string::npos) {
@@ -34,7 +55,6 @@ bool carregarTokens(
 
         int estadoAtual = estadoInicial;
 
-        // Cria uma transicao para cada caractere
         for (char simbolo : token) {
 
             int novoEstado = automato.adicionarEstado();
@@ -48,11 +68,8 @@ bool carregarTokens(
             estadoAtual = novoEstado;
         }
 
-        // O ultimo estado representa o token completo
         automato.marcarFinal(estadoAtual, token);
     }
-
-    arquivo.close();
 
     return true;
 }

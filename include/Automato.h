@@ -7,15 +7,14 @@
 
 using namespace std;
 
-// Identificam as posicoes do automato
+// Representa um estado do automato.
 struct Estado {
     int id;
     bool final;
-    // guardamos os nomes dos tokens pois o projeto deve identificar qual token foi reconhecido
     vector<string> tokens;
 };
 
-// Indica pra qual estado vamos ao ler determinado simbolo
+// Representa uma transicao.
 struct Transicao {
     int origem;
     char simbolo;
@@ -30,6 +29,7 @@ private:
     set<char> alfabeto;
 
     int estadoInicial;
+    int estadoErro;
 
 public:
     Automato();
@@ -37,20 +37,21 @@ public:
     int adicionarEstado();
 
     void definirEstadoInicial(int estado);
+    void definirEstadoErro(int estado);
 
     void marcarFinal(int estado, string token = "");
 
     void adicionarTransicao(int origem, char simbolo, int destino);
-
     void adicionarTransicaoEpsilon(int origem, int destino);
 
-    void imprimir();
+    void imprimir() const;
 
-    // Acessores para os algoritmos que implementaremos depois
     const vector<Estado>& getEstados() const;
     const vector<Transicao>& getTransicoes() const;
     const set<char>& getAlfabeto() const;
+
     int getEstadoInicial() const;
+    int getEstadoErro() const;
 };
 
 #endif

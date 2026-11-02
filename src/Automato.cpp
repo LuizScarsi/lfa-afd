@@ -1,54 +1,70 @@
 #include "../include/Automato.h"
 
+#include <algorithm>
 #include <iostream>
-#include <stdexcept>
+
+using namespace std;
 
 Automato::Automato() {
     estadoInicial = -1;
+    estadoErro = -1;
 }
 
-// Cria um estado e retorna seu identificador
 int Automato::adicionarEstado() {
-    int id = estados.size();
+    int id = static_cast<int>(estados.size());
 
-    Estado novo;
-    novo.id = id;
-    novo.final = false;
+    Estado novoEstado;
+    novoEstado.id = id;
+    novoEstado.final = false;
 
-    estados.push_back(novo);
+    estados.push_back(novoEstado);
 
     return id;
 }
 
-// Define o estado inicial
 void Automato::definirEstadoInicial(int estado) {
-    if (estado < 0 || estado >= estados.size()) {
-        throw invalid_argument("Estado inicial invalido");
+    if (estado >= 0 &&
+        estado < static_cast<int>(estados.size())) {
+        estadoInicial = estado;
     }
-
-    estadoInicial = estado;
 }
 
-// Marca um estado como final
+void Automato::definirEstadoErro(int estado) {
+    if (estado >= 0 &&
+        estado < static_cast<int>(estados.size())) {
+        estadoErro = estado;
+    } else {
+        estadoErro = -1;
+    }
+}
+
 void Automato::marcarFinal(int estado, string token) {
-    if (estado < 0 || estado >= estados.size()) {
-        throw invalid_argument("Estado final invalido");
+    if (estado < 0 ||
+        estado >= static_cast<int>(estados.size())) {
+        return;
     }
 
     estados[estado].final = true;
 
     if (!token.empty()) {
-        estados[estado].tokens.push_back(token);
+        const vector<string>& tokens = estados[estado].tokens;
+
+        if (find(tokens.begin(), tokens.end(), token) == tokens.end()) {
+            estados[estado].tokens.push_back(token);
+        }
     }
 }
 
-// Adiciona uma transicao comum
 void Automato::adicionarTransicao(
-    int origem, char simbolo, int destino
+    int origem,
+    char simbolo,
+    int destino
 ) {
-    if (origem < 0 || origem >= estados.size() ||
-        destino < 0 || destino >= estados.size()) {
-        throw invalid_argument("Estado invalido na transicao");
+    if (origem < 0 ||
+        destino < 0 ||
+        origem >= static_cast<int>(estados.size()) ||
+        destino >= static_cast<int>(estados.size())) {
+        return;
     }
 
     Transicao nova;
@@ -61,13 +77,12 @@ void Automato::adicionarTransicao(
     alfabeto.insert(simbolo);
 }
 
-// Adiciona uma transicao epsilon
-void Automato::adicionarTransicaoEpsilon(
-    int origem, int destino
-) {
-    if (origem < 0 || origem >= estados.size() ||
-        destino < 0 || destino >= estados.size()) {
-        throw invalid_argument("Estado invalido na transicao");
+void Automato::adicionarTransicaoEpsilon(int origem, int destino) {
+    if (origem < 0 ||
+        destino < 0 ||
+        origem >= static_cast<int>(estados.size()) ||
+        destino >= static_cast<int>(estados.size())) {
+        return;
     }
 
     Transicao nova;
@@ -79,8 +94,7 @@ void Automato::adicionarTransicaoEpsilon(
     transicoes.push_back(nova);
 }
 
-// Imprime o automato
-void Automato::imprimir() {
+void Automato::imprimir() const {
     cout << "\nESTADOS:\n";
 
     for (const Estado& estado : estados) {
@@ -93,9 +107,23 @@ void Automato::imprimir() {
         if (estado.final) {
             cout << " (Final)";
 
-            for (const string& token : estado.tokens) {
-                cout << " [" << token << "]";
+            if (!estado.tokens.empty()) {
+                cout << " [";
+
+                for (size_t i = 0; i < estado.tokens.size(); i++) {
+                    cout << estado.tokens[i];
+
+                    if (i + 1 < estado.tokens.size()) {
+                        cout << ", ";
+                    }
+                }
+
+                cout << "]";
             }
+        }
+
+        if (estado.id == estadoErro) {
+            cout << " (Erro)";
         }
 
         cout << "\n";
@@ -103,16 +131,16 @@ void Automato::imprimir() {
 
     cout << "\nTRANSICOES:\n";
 
-    for (const Transicao& t : transicoes) {
-        cout << "q" << t.origem << " --";
+    for (const Transicao& transicao : transicoes) {
+        cout << "q" << transicao.origem << " --";
 
-        if (t.epsilon) {
-            cout << "epsilon";
+        if (transicao.epsilon) {
+            cout << "ε";
         } else {
-            cout << t.simbolo;
+            cout << transicao.simbolo;
         }
 
-        cout << "--> q" << t.destino << "\n";
+        cout << "--> q" << transicao.destino << "\n";
     }
 
     cout << "\nALFABETO: ";
@@ -124,7 +152,6 @@ void Automato::imprimir() {
     cout << "\n";
 }
 
-// Acessores
 const vector<Estado>& Automato::getEstados() const {
     return estados;
 }
@@ -139,4 +166,8 @@ const set<char>& Automato::getAlfabeto() const {
 
 int Automato::getEstadoInicial() const {
     return estadoInicial;
+}
+
+int Automato::getEstadoErro() const {
+    return estadoErro;
 }
