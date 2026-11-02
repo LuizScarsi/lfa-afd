@@ -8,26 +8,16 @@
 
 using namespace std;
 
-// Calcula o fecho-epsilon de um conjunto de estados
-set<int> fechoEpsilon(
-    const Automato& automato,
-    const set<int>& conjunto
-) {
+set<int> fechoEpsilon(const Automato& automato, const set<int>& conjunto) {
     set<int> resultado = conjunto;
-    vector<int> pilha;
-
-    for (int estado : conjunto) {
-        pilha.push_back(estado);
-    }
+    vector<int> pilha(conjunto.begin(), conjunto.end());
 
     while (!pilha.empty()) {
         int atual = pilha.back();
         pilha.pop_back();
 
         for (const Transicao& t : automato.getTransicoes()) {
-
             if (t.origem == atual && t.epsilon) {
-
                 if (resultado.insert(t.destino).second) {
                     pilha.push_back(t.destino);
                 }
@@ -38,125 +28,101 @@ set<int> fechoEpsilon(
     return resultado;
 }
 
-// Transforma um AFND em AFD
 Automato determinizar(const Automato& afnd) {
-
     Automato afd;
 
-    // Relaciona cada conjunto de estados do AFND
-    // com um estado correspondente no AFD
-    map<set<int>, int> estadosCriados;
-
-    // Guarda os conjuntos que ainda precisam ser processados
+    map<set<int>, int> subconjuntoParaId;
     queue<set<int>> fila;
 
-    // Cria um estado do AFD para um conjunto do AFND
-    auto criarEstado = [&](const set<int>& conjunto) {
+    int contadorAFD = 0;
 
-        int novoEstado = afd.adicionarEstado();
+    auto criarEstadoAFD = [&](const set<int>& subconjunto) -> int {
+        string nomeAFD = "D" + to_string(contadorAFD++);
+        int novoId = afd.adicionarEstado(nomeAFD);
+        subconjuntoParaId[subconjunto] = novoId;
+        fila.push(subconjunto);
 
-        estadosCriados[conjunto] = novoEstado;
-        fila.push(conjunto);
+        // Verifica se algum estado do subconjunto e final e transfere os tokens
+        bool ehFinal = false;
+        vector<string> tokensColetados;
 
-        cout << "Q" << novoEstado << " representa {";
-
-        bool primeiro = true;
-        bool final = false;
-
-        for (int estado : conjunto) {
-
-            if (!primeiro) {
-                cout << ", ";
-            }
-
-            cout << "q" << estado;
-            primeiro = false;
-
-            const Estado& original = afnd.getEstados()[estado];
-
-            if (original.final) {
-                final = true;
-
-                for (const string& token : original.tokens) {
-                    afd.marcarFinal(novoEstado, token);
+        for (int idOrig : subconjunto) {
+            const Estado& estOrig = afnd.getEstados()[idOrig];
+            if (estOrig.final) {
+                ehFinal = true;
+                for (const string& tok : estOrig.tokens) {
+                    afd.marcarFinal(novoId, tok);
+                    tokensColetados.push_back(tok);
                 }
             }
         }
 
-        cout << "}\n";
-
-        // Se for final, mas não possuir nome de token,
-        // ainda assim precisa ser marcado como final
-        if (final) {
-            afd.marcarFinal(novoEstado);
+        if (ehFinal) {
+            afd.marcarFinal(novoId);
         }
 
-        return novoEstado;
+        // Imprime a correspondencia pedagógica
+        cout << "  " << nomeAFD << " = { ";
+        bool primeiro = true;
+        for (int idOrig : subconjunto) {
+            if (!primeiro) cout << ", ";
+            cout << afnd.getEstados()[idOrig].nome;
+            primeiro = false;
+        }
+        cout << " }";
+
+        if (ehFinal) {
+            cout << "  [FINAL";
+            if (!tokensColetados.empty()) {
+                cout << ": ";
+                for (size_t i = 0; i < tokensColetados.size(); ++i) {
+                    cout << (i > 0 ? ", " : "") << tokensColetados[i];
+                }
+            }
+            cout << "]";
+        }
+        cout << "\n";
+
+        return novoId;
     };
 
-    // O estado inicial do AFD é o fecho-epsilon
-    // do estado inicial do AFND
-    set<int> inicial = fechoEpsilon(
-        afnd,
-        {afnd.getEstadoInicial()}
-    );
+    cout << "\n--- Correspondencia de Estados (Subconjuntos -> AFD) ---\n";
 
-    int estadoInicial = criarEstado(inicial);
+    set<int> inicialFecho = fechoEpsilon(afnd, {afnd.getEstadoInicial()});
+    int idInicialAFD = criarEstadoAFD(inicialFecho);
+    afd.definirEstadoInicial(idInicialAFD);
 
-    afd.definirEstadoInicial(estadoInicial);
-
-    // Processa os conjuntos enquanto houver novos estados
     while (!fila.empty()) {
-
         set<int> atual = fila.front();
         fila.pop();
 
-        int origem = estadosCriados[atual];
+        int origemAFD = subconjuntoParaId[atual];
 
-        // Testa cada símbolo do alfabeto
-        for (char simbolo : afnd.getAlfabeto()) {
+        for (char c : afnd.getAlfabeto()) {
+            set<int> alcancaveis;
 
-            set<int> destinos;
-
-            // Descobre todos os destinos possíveis
-            for (int estado : atual) {
-
-                for (const Transicao& t : afnd.getTransicoes()) {
-
-                    if (t.origem == estado &&
-                        !t.epsilon &&
-                        t.simbolo == simbolo) {
-
-                        destinos.insert(t.destino);
-                    }
+            for (int idOrig : atual) {
+                vector<int> dests = afnd.getDestinos(idOrig, c);
+                for (int d : dests) {
+                    alcancaveis.insert(d);
                 }
             }
 
-            // Não cria transição para conjunto vazio.
-            // O estado de erro será adicionado depois.
-            if (destinos.empty()) {
+            if (alcancaveis.empty()) {
                 continue;
             }
 
-            // Considera também as transições epsilon
-            destinos = fechoEpsilon(afnd, destinos);
+            set<int> proximoSubconjunto = fechoEpsilon(afnd, alcancaveis);
+            int destinoAFD;
 
-            int destino;
-
-            // Verifica se o conjunto já foi criado
-            auto encontrado = estadosCriados.find(destinos);
-
-            if (encontrado != estadosCriados.end()) {
-
-                destino = encontrado->second;
-
+            auto it = subconjuntoParaId.find(proximoSubconjunto);
+            if (it != subconjuntoParaId.end()) {
+                destinoAFD = it->second;
             } else {
-
-                destino = criarEstado(destinos);
+                destinoAFD = criarEstadoAFD(proximoSubconjunto);
             }
 
-            // Adiciona a transição determinística
-            afd.adicionarTransicao(origem, simbolo, destino);
+            afd.adicionarTransicao(origemAFD, c, destinoAFD);
         }
     }
 
