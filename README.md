@@ -34,9 +34,16 @@ O projeto segue fielmente o enunciado oficial da disciplina:
 ```text
 ├── Makefile                   # Script de automacao para compilacao no Linux/WSL
 ├── README.md                  # Documentacao completa do projeto
+├── relatorio/                 # Relatório Acadêmico solicitado pelo docente
+│   ├── Relatorio_LFA_AFD.pdf  # Artigo completo diagramado em PDF (A4)
+│   ├── Relatorio_LFA_AFD.docx # Artigo completo editável no Microsoft Word
+│   └── Relatorio_LFA_AFD.md   # Versão textual em Markdown
 ├── exemplos/
 │   ├── professor.txt          # Arquivo identico ao exemplo fornecido no PDF
-│   └── entrada.txt            # Arquivo de teste alternativo
+│   ├── entrada.txt            # Arquivo de teste alternativo
+│   ├── exemplo1_operadores_digitos.txt     # Laços e dígitos numericos
+│   ├── exemplo2_condicionais_prefixos.txt  # Prefixos concorrentes fortes (in, int, if)
+│   └── exemplo3_inalcancavel_e_morto.txt   # Prova da remocao de estados inalcancaveis e mortos
 ├── include/                   # Cabecalhos (headers C++)
 │   ├── Automato.h             # Estrutura do automato, estados, transicoes e tabela
 │   ├── LeitorArquivo.h        # Parser universal de tokens e gramaticas BNF
