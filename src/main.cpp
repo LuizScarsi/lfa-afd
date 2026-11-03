@@ -114,7 +114,15 @@ int main(int argc, char* argv[]) {
             break;
         }
 
-        if (palavra == "sair" || palavra == "exit" || palavra == "fim") {
+        // Remove quebra de linha estilo Windows (\r) se presente
+        while (!palavra.empty() && (palavra.back() == '\r' || palavra.back() == ' ' || palavra.back() == '\t')) {
+            palavra.pop_back();
+        }
+        while (!palavra.empty() && (palavra.front() == ' ' || palavra.front() == '\t')) {
+            palavra.erase(palavra.begin());
+        }
+
+        if (palavra == "sair" || palavra == "exit" || palavra == ":q") {
             cout << "Encerrando simulador.\n";
             break;
         }

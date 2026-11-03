@@ -1,0 +1,5 @@
+in
+int
+if
+<S> ::= i<ID> | a<ID> | b<ID>
+<ID> ::= i<ID> | a<ID> | b<ID> | 0<ID> | 1<ID> | ε

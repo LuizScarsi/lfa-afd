@@ -7,5 +7,6 @@ bool carregarGramaticaRegular(
     Automato& automato,
     int estadoInicial
 ) {
+    (void)estadoInicial;
     return carregarArquivo(caminho, automato);
 }

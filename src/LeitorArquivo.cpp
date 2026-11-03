@@ -191,9 +191,11 @@ bool carregarArquivo(
 }
 
 bool carregarTokens(const string& caminho, Automato& automato, int estadoInicial) {
+    (void)estadoInicial;
     return carregarArquivo(caminho, automato);
 }
 
 bool carregarGramaticaRegular(const string& caminho, Automato& automato, int estadoInicial, const string& nomeToken) {
+    (void)estadoInicial;
     return carregarArquivo(caminho, automato, nomeToken);
 }
