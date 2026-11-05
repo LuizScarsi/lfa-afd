@@ -1,0 +1,2382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador & Motion LFA - Gerador de AFD Mínimo (UFFS)</title>
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: #111726;
+      --bg-card-hover: #161f33;
+      --border: #232f48;
+      --text-main: #e2e8f0;
+      --text-muted: #94a3b8;
+      --accent-blue: #38bdf8;
+      --accent-purple: #c084fc;
+      --accent-green: #4ade80;
+      --accent-orange: #fb923c;
+      --accent-red: #f87171;
+      --accent-cyan: #22d3ee;
+      --font-mono: 'Fira Code', 'Courier New', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    header {
+      background: linear-gradient(180deg, #131b2e 0%, #0e1524 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: white;
+      font-weight: 800;
+      font-size: 12px;
+      padding: 5px 9px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-titles h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #f8fafc;
+      letter-spacing: -0.2px;
+    }
+
+    .brand-titles p {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .motion-bar {
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+      padding: 8px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .timeline-steps {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .step-btn {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .step-btn:hover {
+      background: #334155;
+      color: #fff;
+    }
+
+    .step-btn.active {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #fff;
+      box-shadow: 0 0 12px rgba(37, 99, 235, 0.5);
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-action {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: #f1f5f9;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 12px;
+    }
+
+    .btn-action:hover {
+      background: #334155;
+      border-color: #475569;
+    }
+
+    .btn-action.play-btn {
+      background: #2563eb;
+      border-color: #3b82f6;
+      width: 36px;
+      height: 36px;
+      font-size: 14px;
+    }
+
+    .btn-action.play-btn:hover {
+      background: #1d4ed8;
+      box-shadow: 0 0 14px rgba(37,99,235,0.6);
+    }
+
+    .speed-select {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .record-btn {
+      background: #dc2626;
+      border: 1px solid #ef4444;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s;
+    }
+
+    .record-btn:hover {
+      background: #b91c1c;
+      box-shadow: 0 0 12px rgba(220, 38, 38, 0.5);
+    }
+
+    .record-btn.recording {
+      animation: pulseRecord 1s infinite alternate;
+    }
+
+    @keyframes pulseRecord {
+      from { transform: scale(1); opacity: 1; }
+      to { transform: scale(1.05); opacity: 0.8; }
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 360px 1fr 400px;
+      gap: 12px;
+      padding: 10px 16px;
+      height: calc(100vh - 105px);
+      min-height: 560px;
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+
+    .panel-header {
+      padding: 8px 12px;
+      background: #0f172a;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-body {
+      padding: 10px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sample-picker {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: #f1f5f9;
+      padding: 6px 8px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      outline: none;
+    }
+
+    .code-area {
+      width: 100%;
+      height: 75px;
+      background: #090d16;
+      border: 1px solid var(--border);
+      color: #38bdf8;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 6px;
+      border-radius: 5px;
+      resize: vertical;
+      outline: none;
+      user-select: text;
+    }
+
+    .load-input-btn {
+      width: 100%;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 6px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .load-input-btn:hover {
+      background: #1d4ed8;
+    }
+
+    /* CODE TRACER PANEL (Mapeamento do Código C++) */
+    .code-tracer-card {
+      background: #0b111e;
+      border: 1px solid #1e293b;
+      border-left: 3px solid #38bdf8;
+      border-radius: 6px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .tracer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .tracer-file-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.12);
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .tracer-line-badge {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: #94a3b8;
+    }
+
+    .tracer-code-snippet {
+      background: #060911;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 6px 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.45;
+      color: #e2e8f0;
+      overflow-x: auto;
+      user-select: text;
+    }
+
+    .tracer-code-snippet .hl-line {
+      background: rgba(37, 99, 235, 0.25);
+      border-left: 2px solid #3b82f6;
+      padding-left: 4px;
+      display: block;
+      color: #ffffff;
+      font-weight: 600;
+    }
+
+    .tracer-vars {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 8px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      color: #c084fc;
+      background: rgba(192, 132, 252, 0.08);
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
+
+    .var-pill {
+      display: inline-flex;
+      gap: 3px;
+    }
+    .var-name { color: #94a3b8; }
+    .var-val { color: #38bdf8; font-weight: bold; }
+
+    .console-logs {
+      background: #060911;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 8px;
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      height: 120px;
+      overflow-y: auto;
+      user-select: text;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 5px;
+      line-height: 1.35;
+    }
+    .log-tag { font-weight: bold; }
+    .log-tag.info { color: var(--accent-blue); }
+    .log-tag.warn { color: var(--accent-orange); }
+    .log-tag.success { color: var(--accent-green); }
+    .log-tag.step { color: var(--accent-purple); }
+    .log-tag.error { color: var(--accent-red); }
+
+    .step-explanation {
+      background: #162035;
+      border-left: 3px solid var(--accent-cyan);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+
+    /* CENTER PANEL: CANVAS */
+    .canvas-container {
+      position: relative;
+      flex: 1;
+      background: radial-gradient(circle at center, #131b2e 0%, #090d16 100%);
+      overflow: hidden;
+    }
+
+    canvas#automatonCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    canvas#automatonCanvas:active {
+      cursor: grabbing;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 6px;
+      z-index: 5;
+    }
+
+    .canvas-btn {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: all 0.2s;
+    }
+
+    .canvas-btn:hover {
+      background: rgba(30, 41, 59, 0.95);
+      color: #fff;
+    }
+
+    .canvas-btn.active-auto {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #ffffff;
+      box-shadow: 0 0 10px rgba(37,99,235,0.5);
+    }
+
+    .canvas-legend {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 10.5px;
+      color: #94a3b8;
+      display: flex;
+      gap: 10px;
+      backdrop-filter: blur(4px);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* RIGHT PANEL: TRANSITION TABLE */
+    .table-container {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 100%;
+    }
+
+    table.transition-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-align: center;
+    }
+
+    table.transition-table th {
+      background: #1e293b;
+      color: #94a3b8;
+      padding: 7px 5px;
+      border: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    table.transition-table td {
+      padding: 6px 5px;
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    table.transition-table tr:hover td {
+      background: #1e293b;
+    }
+
+    table.transition-table td.state-name {
+      text-align: left;
+      font-weight: 700;
+      color: var(--accent-blue);
+      padding-left: 8px;
+    }
+
+    table.transition-table td.tokens-col {
+      text-align: left;
+      font-size: 10px;
+      color: var(--accent-purple);
+      padding-left: 6px;
+    }
+
+    table.transition-table td.cell-active {
+      background: #3b82f6 !important;
+      color: #ffffff !important;
+      font-weight: bold;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+    }
+
+    table.transition-table td.cell-indeterminism {
+      background: rgba(251, 146, 60, 0.25) !important;
+      color: var(--accent-orange) !important;
+      font-weight: bold;
+      border-color: var(--accent-orange);
+    }
+
+    table.transition-table tr.state-dead-row {
+      background: rgba(248, 113, 113, 0.15) !important;
+      text-decoration: line-through;
+      color: #f87171 !important;
+    }
+
+    table.transition-table tr.state-dead-row td {
+      color: #f87171 !important;
+    }
+
+    table.transition-table td.cell-error-added {
+      background: rgba(239, 68, 68, 0.2) !important;
+      color: #fca5a5 !important;
+      animation: highlightError 0.8s ease;
+    }
+
+    @keyframes highlightError {
+      0% { background: #ef4444; color: #fff; }
+      100% { background: rgba(239, 68, 68, 0.2); }
+    }
+
+    /* BOTTOM TEST BAR */
+    .bottom-test-bar {
+      grid-column: 1 / -1;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .test-input {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      width: 180px;
+      outline: none;
+      user-select: text;
+    }
+
+    .tape-container {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #090d16;
+      border: 1px solid var(--border);
+      padding: 3px 6px;
+      border-radius: 5px;
+      flex: 1;
+      overflow-x: auto;
+      min-height: 34px;
+    }
+
+    .tape-cell {
+      width: 26px;
+      height: 26px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-weight: bold;
+      font-size: 12px;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .tape-cell.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #60a5fa;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(37,99,235,0.6);
+    }
+
+    .tape-cell.active::after {
+      content: '▲';
+      position: absolute;
+      bottom: -13px;
+      font-size: 9px;
+      color: #38bdf8;
+    }
+
+    .result-badge {
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      min-width: 130px;
+      text-align: center;
+    }
+    .result-badge.idle { background: #334155; color: #94a3b8; }
+    .result-badge.running { background: #0284c7; color: #ffffff; animation: pulse 1s infinite alternate; }
+    .result-badge.accepted { background: #16a34a; color: #ffffff; box-shadow: 0 0 10px rgba(22,163,74,0.6); }
+    .result-badge.rejected { background: #dc2626; color: #ffffff; box-shadow: 0 0 10px rgba(220,38,38,0.6); }
+
+    @keyframes pulse {
+      from { opacity: 0.8; }
+      to { opacity: 1; transform: scale(1.02); }
+    }
+
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #090d16; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-badge">UFFS • LFA</div>
+      <div class="brand-titles">
+        <h1>Simulador & Motion Video • Gerador de AFD Mínimo</h1>
+        <p>CCR: Linguagens Formais e Autômatos • Prof. Braulio Mello • Chapecó</p>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <button class="step-btn" id="btnExportGraph" title="Exportar imagem do autômato em PNG">
+        📷 Exportar Imagem
+      </button>
+      <button class="record-btn" id="btnRecordVideo" title="Gravar animação como vídeo (.webm)">
+        <span id="recordIcon">⏺</span> <span id="recordText">Gravar Vídeo</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTROLS & TIMELINE -->
+  <section class="motion-bar">
+    <div class="timeline-steps">
+      <button class="step-btn active" data-step="1"><span>1</span> Carga & AFND</button>
+      <button class="step-btn" data-step="2"><span>2</span> Determinização</button>
+      <button class="step-btn" data-step="3"><span>3</span> Minimização</button>
+      <button class="step-btn" data-step="4"><span>4</span> Estado de Erro</button>
+      <button class="step-btn" data-step="5"><span>5</span> Reconhecer</button>
+    </div>
+
+    <div class="playback-controls">
+      <button class="btn-action" id="btnRestart" title="Reiniciar do primeiro micro-passo">⏮</button>
+      <button class="btn-action" id="btnPrevStep" title="Passo anterior">◀</button>
+      <button class="btn-action play-btn" id="btnPlayPause" title="Play / Pause">▶</button>
+      <button class="btn-action" id="btnNextStep" title="Próximo passo">▶</button>
+      <button class="btn-action" id="btnForwardStep" title="Avançar direto para a próxima etapa">⏭</button>
+
+      <span style="font-size: 11px; color: var(--text-muted); margin-left: 6px;">Velocidade:</span>
+      <select class="speed-select" id="speedSelect">
+        <option value="2000">0.5x (Didático)</option>
+        <option value="1000" selected>1.0x (Normal)</option>
+        <option value="500">2.0x (Rápido)</option>
+        <option value="200">5.0x (Ultra)</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- MAIN 3-PANEL INTERFACE -->
+  <main>
+    <!-- LEFT PANEL: ENTRADA & CODE TRACER -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">
+          <span>⚙️</span> Entrada & Rastreamento C++
+        </span>
+      </div>
+      <div class="panel-body">
+        <select class="sample-picker" id="samplePicker">
+          <option value="professor">professor.txt (se, entao, senao + vogais)</option>
+          <option value="exemplo1">exemplo1 (para, passo, proximo + dígitos)</option>
+          <option value="exemplo2">exemplo2 (in, int, if + identificador)</option>
+          <option value="exemplo3">exemplo3 (prova de inalcançáveis e mortos)</option>
+          <option value="custom">✏️ Personalizado (editar abaixo)</option>
+        </select>
+
+        <textarea class="code-area" id="inputCode" spellcheck="false"></textarea>
+        <button class="load-input-btn" id="btnProcessInput">⚙️ Recarregar e Reprocessar</button>
+
+        <!-- NOVO CARD: INSPETOR DE CÓDIGO C++ EM TEMPO REAL -->
+        <div class="code-tracer-card" id="codeTracerCard">
+          <div class="tracer-header">
+            <span class="tracer-file-badge" id="tracerFile">src/main.cpp</span>
+            <span class="tracer-line-badge" id="tracerLine">Linha --</span>
+          </div>
+          <div class="tracer-code-snippet" id="tracerSnippet">
+            <span class="hl-line">// Inicializando pipeline...</span>
+          </div>
+          <div class="tracer-vars" id="tracerVars">
+            <span class="var-pill"><span class="var-name">status:</span> <span class="var-val">pronto</span></span>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+          <span style="font-size: 10.5px; font-weight: 700; color: #94a3b8;">TERMINAL:</span>
+          <button style="background:none; border:none; color: #64748b; font-size: 10px; cursor: pointer;" id="btnClearLogs">Limpar</button>
+        </div>
+        <div class="console-logs" id="consoleLogs"></div>
+
+        <div class="step-explanation" id="stepExplanation">
+          Carregando explicações didáticas da etapa...
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER PANEL: AUTÔMATO (CANVAS COM AUTO-LAYOUT DINÂMICO) -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">
+          <span>🕸️</span> Visualização Gráfica do Autômato
+        </span>
+        <span style="font-size: 11px; color: var(--accent-cyan);" id="stateCountBadge">0 estados</span>
+      </div>
+      <div class="canvas-container">
+        <canvas id="automatonCanvas"></canvas>
+        <div class="canvas-overlay">
+          <button class="canvas-btn active-auto" id="btnToggleAutoLayout" title="Auto-layout dinâmico contínuo ativado">✨ Auto-Organização: ON</button>
+          <button class="canvas-btn" id="btnResetView" title="Centralizar visualização">⛶ Centralizar</button>
+        </div>
+        <div class="canvas-legend">
+          <div class="legend-item"><div class="legend-dot" style="background: #3b82f6;"></div> Inicial (->)</div>
+          <div class="legend-item"><div class="legend-dot" style="background: #10b981;"></div> Final (*)</div>
+          <div class="legend-item"><div class="legend-dot" style="background: #ef4444;"></div> Erro (E)</div>
+          <div class="legend-item"><div class="legend-dot" style="background: #f59e0b;"></div> Indeterminado</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT PANEL: MATRIZ DE TRANSIÇÃO -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-title">
+          <span>📊</span> Tabela de Transição (Delta)
+        </span>
+        <span style="font-size: 11px; color: var(--text-muted);" id="tableStepBadge">Etapa 1</span>
+      </div>
+      <div class="panel-body table-container">
+        <table class="transition-table" id="transitionTable">
+          <thead>
+            <tr id="tableHeaderRow">
+              <th>Estado (δ)</th>
+              <th>Tokens</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- BOTTOM TEST BAR (ETAPA 5) -->
+    <section class="bottom-test-bar">
+      <span style="font-size: 11.5px; font-weight: 700; color: #94a3b8;">SENTENÇA:</span>
+      <input type="text" class="test-input" id="testSentenceInput" value="senao" placeholder="Digite uma palavra..." />
+      <button class="step-btn" id="btnRunTest" style="background: #2563eb; color: #fff; border-color: #3b82f6;">
+        ▶ Testar Sentença
+      </button>
+
+      <div class="tape-container" id="tapeContainer"></div>
+      <div class="result-badge idle" id="resultBadge">AGUARDANDO TESTE</div>
+    </section>
+  </main>
+
+  <script>
+    /* =====================================================================
+       1. EXEMPLOS PREDEFINIDOS
+       ===================================================================== */
+    const SAMPLES = {
+      professor: `se\nentao\nsenao\n<S> ::= a<A> | e<A> | i<A> | o<A> | u<A>\n<A> ::= a<A> | e<A> | i<A> | o<A> | u<A> | ε`,
+      exemplo1: `para\npasso\nproximo\n<S> ::= 0<D> | 1<D> | 2<D> | 3<D> | 4<D> | 5<D> | 6<D> | 7<D> | 8<D> | 9<D>\n<D> ::= 0<D> | 1<D> | 2<D> | 3<D> | 4<D> | 5<D> | 6<D> | 7<D> | 8<D> | 9<D> | ε`,
+      exemplo2: `in\nint\nif\n<S> ::= i<ID> | a<ID> | b<ID>\n<ID> ::= i<ID> | a<ID> | b<ID> | 0<ID> | 1<ID> | ε`,
+      exemplo3: `inicio\nfim\n<S> ::= a<A> | m<M>\n<A> ::= a<A> | ε\n<M> ::= m<M>\n<Z> ::= z<Z> | ε`
+    };
+
+    /* =====================================================================
+       2. ESTRUTURA DE DADOS DO AUTÔMATO
+       ===================================================================== */
+    class Automato {
+      constructor() {
+        this.estados = [];
+        this.transicoes = [];
+        this.alfabeto = new Set();
+        this.estadoInicial = -1;
+        this.estadoErro = -1;
+      }
+
+      adicionarEstado(nome) {
+        const id = this.estados.length;
+        this.estados.push({ id, nome: nome || `q${id}`, final: false, tokens: [], isErro: false });
+        return id;
+      }
+
+      definirEstadoInicial(id) { this.estadoInicial = id; }
+
+      definirEstadoErro(id) {
+        this.estadoErro = id;
+        if (this.estados[id]) this.estados[id].isErro = true;
+      }
+
+      marcarFinal(id, token = "") {
+        if (this.estados[id]) {
+          this.estados[id].final = true;
+          if (token && !this.estados[id].tokens.includes(token)) {
+            this.estados[id].tokens.push(token);
+          }
+        }
+      }
+
+      adicionarTransicao(origem, simbolo, destino) {
+        this.transicoes.push({ origem, simbolo, destino, epsilon: false });
+        this.alfabeto.add(simbolo);
+      }
+
+      adicionarTransicaoEpsilon(origem, destino) {
+        this.transicoes.push({ origem, simbolo: 'ε', destino, epsilon: true });
+      }
+
+      getDestinos(origem, simbolo) {
+        return this.transicoes
+          .filter(t => t.origem === origem && !t.epsilon && t.simbolo === simbolo)
+          .map(t => t.destino);
+      }
+
+      getDestinoAFD(origem, simbolo) {
+        const t = this.transicoes.find(t => t.origem === origem && !t.epsilon && t.simbolo === simbolo);
+        return t ? t.destino : -1;
+      }
+
+      clone() {
+        const copia = new Automato();
+        copia.estados = JSON.parse(JSON.stringify(this.estados));
+        copia.transicoes = JSON.parse(JSON.stringify(this.transicoes));
+        copia.alfabeto = new Set(this.alfabeto);
+        copia.estadoInicial = this.estadoInicial;
+        copia.estadoErro = this.estadoErro;
+        return copia;
+      }
+    }
+
+    class GeradorNomes {
+      constructor() {
+        this.letraCharCode = 'A'.charCodeAt(0);
+        this.contador = 0;
+      }
+
+      proximo() {
+        if (String.fromCharCode(this.letraCharCode) === 'S') {
+          this.letraCharCode++;
+        }
+        if (this.letraCharCode <= 'Z'.charCodeAt(0)) {
+          return String.fromCharCode(this.letraCharCode++);
+        }
+        this.contador++;
+        return `q${this.contador}`;
+      }
+    }
+
+    /* =====================================================================
+       3. PIPELINE DE EXECUÇÃO COM RASTREAMENTO DO CÓDIGO C++
+       ===================================================================== */
+    let timelineEvents = [];
+    let currentEventIndex = 0;
+    let isPlaying = false;
+    let playTimer = null;
+    let playbackSpeed = 1000;
+
+    let afndModel = null;
+    let afdDeterminadoModel = null;
+    let afdMinimizadoModel = null;
+    let afdFinalModel = null;
+
+    function buildPipeline(inputText) {
+      timelineEvents = [];
+      const afnd = new Automato();
+      const gerador = new GeradorNomes();
+
+      const estadoInicial = afnd.adicionarEstado("S");
+      afnd.definirEstadoInicial(estadoInicial);
+
+      timelineEvents.push({
+        etapa: 1,
+        tipo: 'INFO',
+        automato: afnd.clone(),
+        destaque: { estado: estadoInicial },
+        log: { tag: 'step', msg: '[ETAPA 1] Criação do estado inicial compartilhado S.' },
+        explicacao: 'Iniciando carga: O estado S é criado e compartilhado exclusivamente entre todos os tokens e a regra BNF inicial.',
+        codeTrace: {
+          file: 'src/LeitorArquivo.cpp',
+          lines: '122-124',
+          snippet: `int estadoInicial = automato.adicionarEstado("S");\nautomato.definirEstadoInicial(estadoInicial);`,
+          vars: { 'estadoInicial': 'S (id: 0)' }
+        }
+      });
+
+      const linhas = inputText.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#') && !l.startsWith('//'));
+      const tokens = [];
+      const producoes = [];
+      let tokenGramatica = "variavel";
+
+      for (let linha of linhas) {
+        if (linha.startsWith('[') && linha.endsWith(']')) {
+          const sec = linha.slice(1, -1);
+          if (sec !== 'TOKENS' && sec !== 'GRAMATICA' && sec !== 'GR') tokenGramatica = sec;
+          continue;
+        }
+        if (linha.includes('::=')) {
+          const [esq, dir] = linha.split('::=').map(s => s.trim());
+          const alternativas = dir.split('|').map(s => s.trim()).filter(Boolean);
+          producoes.push({ naoTerminal: esq, alternativas });
+        } else {
+          tokens.push(linha);
+        }
+      }
+
+      for (let tok of tokens) {
+        let atual = estadoInicial;
+        for (let i = 0; i < tok.length; i++) {
+          const c = tok[i];
+          const novoEstado = afnd.adicionarEstado(gerador.proximo());
+          afnd.adicionarTransicao(atual, c, novoEstado);
+
+          const temIndeterminismo = afnd.getDestinos(atual, c).length > 1;
+
+          timelineEvents.push({
+            etapa: 1,
+            tipo: 'TRANSICAO',
+            automato: afnd.clone(),
+            destaque: { origem: atual, simbolo: c, destino: novoEstado, indeterminismo: temIndeterminismo },
+            log: {
+              tag: temIndeterminismo ? 'warn' : 'info',
+              msg: `Token "${tok}": Transição (${afnd.estados[atual].nome}) --${c}--> (${afnd.estados[novoEstado].nome})${temIndeterminismo ? ' [INDETERMINISMO!]' : ''}`
+            },
+            explicacao: temIndeterminismo 
+              ? `O estado ${afnd.estados[atual].nome} agora tem múltiplos destinos para '${c}'. Indeterminismo detectado!`
+              : `Inserindo caractere '${c}' da cadeia "${tok}". Novo estado exclusivo criado sem reúso.`,
+            codeTrace: {
+              file: 'src/LeitorArquivo.cpp',
+              lines: '130-136',
+              snippet: `int novoEstado = automato.adicionarEstado(gerador.proximo());\n<span class="hl-line">automato.adicionarTransicao(atual, '${c}', novoEstado);</span>\natual = novoEstado;`,
+              vars: { 'token': `"${tok}"`, 'simbolo': `'${c}'`, 'origem': afnd.estados[atual].nome, 'destino': afnd.estados[novoEstado].nome, 'indeterminismo': temIndeterminismo ? 'SIM' : 'não' }
+            }
+          });
+
+          atual = novoEstado;
+        }
+        afnd.marcarFinal(atual, tok);
+        timelineEvents.push({
+          etapa: 1,
+          tipo: 'FINAL',
+          automato: afnd.clone(),
+          destaque: { estado: atual },
+          log: { tag: 'success', msg: `Estado final marcado: ${afnd.estados[atual].nome} [Token: ${tok}]` },
+          explicacao: `Término da cadeia "${tok}": estado ${afnd.estados[atual].nome} marcado como final.`,
+          codeTrace: {
+            file: 'src/LeitorArquivo.cpp',
+            lines: '137',
+            snippet: `<span class="hl-line">automato.marcarFinal(atual, "${tok}");</span>`,
+            vars: { 'estadoFinal': afnd.estados[atual].nome, 'token': `"${tok}"` }
+          }
+        });
+      }
+
+      if (producoes.length > 0) {
+        const estadosGR = new Map();
+        const naoTerminalInicial = producoes[0].naoTerminal;
+        estadosGR.set(naoTerminalInicial, estadoInicial);
+
+        for (let p of producoes) {
+          if (!estadosGR.has(p.naoTerminal)) {
+            estadosGR.set(p.naoTerminal, afnd.adicionarEstado(gerador.proximo()));
+          }
+        }
+
+        for (let p of producoes) {
+          const origem = estadosGR.get(p.naoTerminal);
+          for (let alt of p.alternativas) {
+            if (alt === 'ε' || alt === '&' || alt === 'eps' || alt === 'epsilon' || alt === 'E') {
+              afnd.marcarFinal(origem, tokenGramatica);
+              timelineEvents.push({
+                etapa: 1,
+                tipo: 'FINAL_GR',
+                automato: afnd.clone(),
+                destaque: { estado: origem },
+                log: { tag: 'step', msg: `Regra ε em ${p.naoTerminal}: Estado ${afnd.estados[origem].nome} é FINAL [${tokenGramatica}]` },
+                explicacao: `Produção com ε: estado ${afnd.estados[origem].nome} marcado como final.`,
+                codeTrace: {
+                  file: 'src/LeitorArquivo.cpp',
+                  lines: '161-163',
+                  snippet: `if (isEpsilon(alt)) {\n<span class="hl-line">    automato.marcarFinal(origem, tokenGramatica);</span>\n}`,
+                  vars: { 'naoTerminal': p.naoTerminal, 'estado': afnd.estados[origem].nome, 'token': tokenGramatica }
+                }
+              });
+            } else if (alt.includes('<') && alt.endsWith('>')) {
+              const terminal = alt[0];
+              const destNome = alt.slice(alt.indexOf('<'));
+              if (!estadosGR.has(destNome)) {
+                estadosGR.set(destNome, afnd.adicionarEstado(gerador.proximo()));
+              }
+              const destino = estadosGR.get(destNome);
+              afnd.adicionarTransicao(origem, terminal, destino);
+              timelineEvents.push({
+                etapa: 1,
+                tipo: 'TRANSICAO_GR',
+                automato: afnd.clone(),
+                destaque: { origem, simbolo: terminal, destino },
+                log: { tag: 'info', msg: `GR: ${p.naoTerminal} -> ${terminal}${destNome} : (${afnd.estados[origem].nome}) --${terminal}--> (${afnd.estados[destino].nome})` },
+                explicacao: `Regra de GR: terminal '${terminal}' levando ao não-terminal ${destNome}.`,
+                codeTrace: {
+                  file: 'src/LeitorArquivo.cpp',
+                  lines: '169-177',
+                  snippet: `<span class="hl-line">automato.adicionarTransicao(origem, terminal, destino);</span>`,
+                  vars: { 'regra': `${p.naoTerminal} -> ${terminal}${destNome}`, 'origem': afnd.estados[origem].nome, 'destino': afnd.estados[destino].nome }
+                }
+              });
+            } else if (alt.length === 1) {
+              const terminal = alt[0];
+              const novoFinal = afnd.adicionarEstado(gerador.proximo());
+              afnd.adicionarTransicao(origem, terminal, novoFinal);
+              afnd.marcarFinal(novoFinal, tokenGramatica);
+            }
+          }
+        }
+      }
+
+      afndModel = afnd;
+
+      // ETAPA 2: DETERMINIZAÇÃO
+      timelineEvents.push({
+        etapa: 2,
+        tipo: 'INICIO_ETAPA',
+        automato: afnd.clone(),
+        log: { tag: 'step', msg: '--- [ETAPA 2] Teorema de Determinização (Construção de Subconjuntos) ---' },
+        explicacao: 'Iniciando determinização: Cada subconjunto de estados alcançáveis no AFND vira um único estado no AFD.',
+        codeTrace: {
+          file: 'src/Determinizar.cpp',
+          lines: '31-39',
+          snippet: `Automato afd;\nmap<set<int>, int> subconjuntoParaId;\nqueue<set<int>> fila;`,
+          vars: { 'algoritmo': 'Construção de Subconjuntos' }
+        }
+      });
+
+      const afd = new Automato();
+      const subconjuntoParaId = new Map();
+      const fila = [];
+      let contadorAFD = 0;
+
+      function getChaveSubconjunto(conjunto) {
+        return Array.from(conjunto).sort((a,b)=>a-b).join(',');
+      }
+
+      function fechoEpsilon(automato, conjunto) {
+        const res = new Set(conjunto);
+        const pilha = Array.from(conjunto);
+        while (pilha.length > 0) {
+          const atual = pilha.pop();
+          for (let t of automato.transicoes) {
+            if (t.origem === atual && t.epsilon) {
+              if (!res.has(t.destino)) {
+                res.add(t.destino);
+                pilha.push(t.destino);
+              }
+            }
+          }
+        }
+        return res;
+      }
+
+      function criarEstadoAFD(subconjunto) {
+        const nomeAFD = `D${contadorAFD++}`;
+        const novoId = afd.adicionarEstado(nomeAFD);
+        const chave = getChaveSubconjunto(subconjunto);
+        subconjuntoParaId.set(chave, novoId);
+        fila.push(subconjunto);
+
+        let ehFinal = false;
+        const tokensColetados = [];
+        for (let idOrig of subconjunto) {
+          const estOrig = afnd.estados[idOrig];
+          if (estOrig.final) {
+            ehFinal = true;
+            for (let tok of estOrig.tokens) {
+              afd.marcarFinal(novoId, tok);
+              if (!tokensColetados.includes(tok)) tokensColetados.push(tok);
+            }
+          }
+        }
+        if (ehFinal) afd.marcarFinal(novoId);
+
+        const nomesOriginais = Array.from(subconjunto).map(id => afnd.estados[id].nome).join(', ');
+        timelineEvents.push({
+          etapa: 2,
+          tipo: 'NOVO_SUBCONJUNTO',
+          automato: afd.clone(),
+          destaque: { estado: novoId },
+          log: { tag: 'info', msg: `Criando ${nomeAFD} = { ${nomesOriginais} } ${ehFinal ? `[FINAL: ${tokensColetados.join(', ')}]` : ''}` },
+          explicacao: `Subconjunto { ${nomesOriginais} } mapeado no estado ${nomeAFD} do AFD.`,
+          codeTrace: {
+            file: 'src/Determinizar.cpp',
+            lines: '39-62',
+            snippet: `string nomeAFD = "D" + to_string(contadorAFD++);\nint novoId = afd.adicionarEstado(nomeAFD);\n<span class="hl-line">subconjuntoParaId[subconjunto] = novoId;</span>\nif (ehFinal) afd.marcarFinal(novoId);`,
+            vars: { 'subconjunto': `{ ${nomesOriginais} }`, 'novoEstadoAFD': nomeAFD, 'ehFinal': ehFinal ? 'SIM' : 'não' }
+          }
+        });
+
+        return novoId;
+      }
+
+      const inicialFecho = fechoEpsilon(afnd, new Set([afnd.estadoInicial]));
+      const idInicialAFD = criarEstadoAFD(inicialFecho);
+      afd.definirEstadoInicial(idInicialAFD);
+
+      while (fila.length > 0) {
+        const atual = fila.shift();
+        const chaveAtual = getChaveSubconjunto(atual);
+        const origemAFD = subconjuntoParaId.get(chaveAtual);
+
+        for (let c of Array.from(afnd.alfabeto).sort()) {
+          const alcancaveis = new Set();
+          for (let idOrig of atual) {
+            const dests = afnd.getDestinos(idOrig, c);
+            for (let d of dests) alcancaveis.add(d);
+          }
+
+          if (alcancaveis.size === 0) continue;
+
+          const proximoSubconjunto = fechoEpsilon(afnd, alcancaveis);
+          const chaveProx = getChaveSubconjunto(proximoSubconjunto);
+          let destinoAFD;
+
+          if (subconjuntoParaId.has(chaveProx)) {
+            destinoAFD = subconjuntoParaId.get(chaveProx);
+          } else {
+            destinoAFD = criarEstadoAFD(proximoSubconjunto);
+          }
+
+          afd.adicionarTransicao(origemAFD, c, destinoAFD);
+          timelineEvents.push({
+            etapa: 2,
+            tipo: 'TRANSICAO_AFD',
+            automato: afd.clone(),
+            destaque: { origem: origemAFD, simbolo: c, destino: destinoAFD },
+            log: { tag: 'step', msg: `Transição AFD: (${afd.estados[origemAFD].nome}) --${c}--> (${afd.estados[destinoAFD].nome})` },
+            explicacao: `Do estado ${afd.estados[origemAFD].nome}, com entrada '${c}', transita deterministicamente para ${afd.estados[destinoAFD].nome}.`,
+            codeTrace: {
+              file: 'src/Determinizar.cpp',
+              lines: '101-125',
+              snippet: `set<int> proximoSubconjunto = fechoEpsilon(afnd, alcancaveis);\n<span class="hl-line">afd.adicionarTransicao(origemAFD, '${c}', destinoAFD);</span>`,
+              vars: { 'origem': afd.estados[origemAFD].nome, 'simbolo': `'${c}'`, 'destino': afd.estados[destinoAFD].nome }
+            }
+          });
+        }
+      }
+
+      afdDeterminadoModel = afd;
+
+      // ETAPA 3: MINIMIZAÇÃO SEM CLASSES DE EQUIVALÊNCIA
+      timelineEvents.push({
+        etapa: 3,
+        tipo: 'INICIO_ETAPA',
+        automato: afd.clone(),
+        log: { tag: 'step', msg: '--- [ETAPA 3] Minimização Sem Classes de Equivalência (Inalcançáveis e Mortos) ---' },
+        explicacao: 'Minimização sem partições: eliminação exclusiva de estados inalcançáveis e mortos.',
+        codeTrace: {
+          file: 'src/Minimizar.cpp',
+          lines: '9-17',
+          snippet: `Automato minimizarAFD(const Automato& afd) {\n    // 1. Identificar alcancaveis (BFS direta)\n    // 2. Identificar vivos (BFS reversa)\n}`,
+          vars: { 'totalEstados': afd.estados.length }
+        }
+      });
+
+      const totalEstados = afd.estados.length;
+      const alcancavel = new Array(totalEstados).fill(false);
+
+      if (afd.estadoInicial >= 0) {
+        const filaBFS = [afd.estadoInicial];
+        alcancavel[afd.estadoInicial] = true;
+        while (filaBFS.length > 0) {
+          const curr = filaBFS.shift();
+          for (let t of afd.transicoes) {
+            if (t.origem === curr && !alcancavel[t.destino]) {
+              alcancavel[t.destino] = true;
+              filaBFS.push(t.destino);
+            }
+          }
+        }
+      }
+
+      const inalcancaveis = [];
+      for (let i = 0; i < totalEstados; i++) {
+        if (!alcancavel[i]) inalcancaveis.push(i);
+      }
+
+      const alcancaFinal = new Array(totalEstados).fill(false);
+      const revTrans = Array.from({ length: totalEstados }, () => []);
+      for (let t of afd.transicoes) revTrans[t.destino].push(t.origem);
+
+      const filaRev = [];
+      for (let i = 0; i < totalEstados; i++) {
+        if (afd.estados[i].final) {
+          alcancaFinal[i] = true;
+          filaRev.push(i);
+        }
+      }
+      while (filaRev.length > 0) {
+        const curr = filaRev.shift();
+        for (let ant of revTrans[curr]) {
+          if (!alcancaFinal[ant]) {
+            alcancaFinal[ant] = true;
+            filaRev.push(ant);
+          }
+        }
+      }
+
+      const mortos = [];
+      for (let i = 0; i < totalEstados; i++) {
+        if (alcancavel[i] && !alcancaFinal[i] && i !== afd.estadoInicial) {
+          mortos.push(i);
+        }
+      }
+
+      timelineEvents.push({
+        etapa: 3,
+        tipo: 'DIAGNOSTICO',
+        automato: afd.clone(),
+        destaque: { inalcancaveis, mortos },
+        log: {
+          tag: (inalcancaveis.length > 0 || mortos.length > 0) ? 'warn' : 'success',
+          msg: `Diagnóstico: Inalcançáveis = [${inalcancaveis.map(i=>afd.estados[i].nome).join(', ') || 'Nenhum'}], Mortos = [${mortos.map(i=>afd.estados[i].nome).join(', ') || 'Nenhum'}]`
+        },
+        explicacao: (inalcancaveis.length > 0 || mortos.length > 0)
+          ? `Estados inúteis detectados! Inalcançáveis nunca são atingidos a partir de S; Mortos nunca chegam a um final.`
+          : `Todos os estados são alcançáveis e vivos (capazes de atingir ao menos um final).`,
+        codeTrace: {
+          file: 'src/Minimizar.cpp',
+          lines: '72-85',
+          snippet: `if (!alcancavel[i]) inalcancaveis.push_back(i);\nelse if (!alcancaFinal[i] && i != inicial) mortos.push_back(i);\n<span class="hl-line">if (ok) manter[i] = true;</span>`,
+          vars: { 'inalcancaveis': inalcancaveis.map(i=>afd.estados[i].nome).join(',') || 'none', 'mortos': mortos.map(i=>afd.estados[i].nome).join(',') || 'none' }
+        }
+      });
+
+      const afdMinimizado = new Automato();
+      const novoIdMap = new Map();
+
+      for (let i = 0; i < totalEstados; i++) {
+        const util = alcancavel[i] && (alcancaFinal[i] || i === afd.estadoInicial);
+        if (util) {
+          const novoId = afdMinimizado.adicionarEstado(afd.estados[i].nome);
+          novoIdMap.set(i, novoId);
+          if (afd.estados[i].final) {
+            for (let tok of afd.estados[i].tokens) afdMinimizado.marcarFinal(novoId, tok);
+            afdMinimizado.marcarFinal(novoId);
+          }
+        } else {
+          timelineEvents.push({
+            etapa: 3,
+            tipo: 'ELIMINACAO',
+            automato: afd.clone(),
+            destaque: { estadoRemovido: i, motivo: !alcancavel[i] ? 'Inalcançável' : 'Morto' },
+            log: { tag: 'error', msg: `Eliminando estado ${afd.estados[i].nome} (${!alcancavel[i] ? 'Inalcançável' : 'Morto'})` },
+            explicacao: `O estado ${afd.estados[i].nome} foi descartado para garantir minimalidade sem classes de equivalência.`,
+            codeTrace: {
+              file: 'src/Minimizar.cpp',
+              lines: '115-125',
+              snippet: `// Estado eliminado: nao e inserido no afdMinimizado\n<span class="hl-line">cout << "Eliminando: " << estados[i].nome;</span>`,
+              vars: { 'estadoRemovido': afd.estados[i].nome, 'motivo': !alcancavel[i] ? 'Inalcançável' : 'Morto' }
+            }
+          });
+        }
+      }
+
+      afdMinimizado.definirEstadoInicial(novoIdMap.get(afd.estadoInicial));
+      for (let t of afd.transicoes) {
+        if (novoIdMap.has(t.origem) && novoIdMap.has(t.destino)) {
+          afdMinimizado.adicionarTransicao(novoIdMap.get(t.origem), t.simbolo, novoIdMap.get(t.destino));
+        }
+      }
+
+      afdMinimizadoModel = afdMinimizado;
+
+      // ETAPA 4: ESTADO DE ERRO
+      timelineEvents.push({
+        etapa: 4,
+        tipo: 'INICIO_ETAPA',
+        automato: afdMinimizado.clone(),
+        log: { tag: 'step', msg: '--- [ETAPA 4] Adição do Estado de Erro e Preenchimento das Células Vazias ---' },
+        explicacao: 'Ao final da minimização, acrescentar o estado de Erro com auto-laços e preencher todas as células não-mapeadas.',
+        codeTrace: {
+          file: 'src/CompletarAutomato.cpp',
+          lines: '19-20',
+          snippet: `<span class="hl-line">int idErro = afd.adicionarEstado("Erro");</span>\nafd.definirEstadoErro(idErro);`,
+          vars: { 'estadoCriado': 'Erro' }
+        }
+      });
+
+      const afdFinal = afdMinimizado.clone();
+      const idErro = afdFinal.adicionarEstado("Erro");
+      afdFinal.definirEstadoErro(idErro);
+
+      timelineEvents.push({
+        etapa: 4,
+        tipo: 'CRIAR_ERRO',
+        automato: afdFinal.clone(),
+        destaque: { estado: idErro },
+        log: { tag: 'warn', msg: `Estado de erro criado: ${afdFinal.estados[idErro].nome} (id: ${idErro})` },
+        explicacao: `Criando o estado especial "Erro". Qualquer sequência inválida de caracteres terminará retida nele.`,
+        codeTrace: {
+          file: 'src/CompletarAutomato.cpp',
+          lines: '19-22',
+          snippet: `int idErro = afd.adicionarEstado("Erro");\n<span class="hl-line">afd.definirEstadoErro(idErro);</span>`,
+          vars: { 'idErro': idErro }
+        }
+      });
+
+      const alfabetoArray = Array.from(afdFinal.alfabeto).sort();
+      const qtdAntesErro = afdFinal.estados.length - 1;
+      let preenchidas = 0;
+
+      for (let s = 0; s < qtdAntesErro; s++) {
+        for (let c of alfabetoArray) {
+          if (afdFinal.getDestinos(s, c).length === 0) {
+            afdFinal.adicionarTransicao(s, c, idErro);
+            preenchidas++;
+          }
+        }
+      }
+
+      for (let c of alfabetoArray) {
+        afdFinal.adicionarTransicao(idErro, c, idErro);
+      }
+
+      timelineEvents.push({
+        etapa: 4,
+        tipo: 'COMPLETUDE_CONCLUIDA',
+        automato: afdFinal.clone(),
+        destaque: { estadoErro: idErro, celulasPreenchidas: preenchidas },
+        log: { tag: 'success', msg: `AFD Completo! ${preenchidas} células vazias direcionadas para Erro. Auto-laços criados para todos os símbolos.` },
+        explicacao: `Agora o AFD é Totalmente Completo. Toda e qualquer entrada sobre o alfabeto possui transição unívoca definida em todos os estados.`,
+        codeTrace: {
+          file: 'src/CompletarAutomato.cpp',
+          lines: '25-37',
+          snippet: `if (!afd.temTransicao(s, c)) {\n<span class="hl-line">    afd.adicionarTransicao(s, c, idErro);</span>\n}\nfor (char c : alfabeto) afd.adicionarTransicao(idErro, c, idErro);`,
+          vars: { 'celulasPreenchidas': preenchidas, 'autoLacosErro': alfabetoArray.length }
+        }
+      });
+
+      afdFinalModel = afdFinal;
+
+      // ETAPA 5: PRONTO PARA RECONHECER
+      timelineEvents.push({
+        etapa: 5,
+        tipo: 'PRONTO_RECONHECIMENTO',
+        automato: afdFinal.clone(),
+        log: { tag: 'step', msg: '=== [ETAPA 5] AFD Pronto para Simulação e Reconhecimento de Sentenças ===' },
+        explicacao: 'O autômato mínimo completo está finalizado. Digite qualquer sentença na barra inferior para ver o cabeçote de leitura em ação!',
+        codeTrace: {
+          file: 'src/Reconhecer.cpp',
+          lines: '14-25',
+          snippet: `int estadoAtual = afd.getEstadoInicial();\nint estadoErro = afd.getEstadoErro();`,
+          vars: { 'estadoInicial': afdFinal.estados[afdFinal.estadoInicial].nome, 'estadoErro': afdFinal.estados[idErro].nome }
+        }
+      });
+
+      return timelineEvents;
+    }
+
+    /* =====================================================================
+       4. SIMULADOR DO CABEÇOTE DE LEITURA (ETAPA 5) COM C++ TRACE
+       ===================================================================== */
+    function simularSentenca(palavra) {
+      if (!afdFinalModel) return;
+
+      const afd = afdFinalModel;
+      const eventosTeste = [];
+      let estadoAtual = afd.estadoInicial;
+      const estadoErro = afd.estadoErro;
+
+      eventosTeste.push({
+        tipo: 'INICIO_TESTE',
+        indiceFita: -1,
+        estadoAtual,
+        log: `Iniciando simulação da sentença "${palavra}" no estado inicial (${afd.estados[estadoAtual].nome}).`,
+        codeTrace: {
+          file: 'src/Reconhecer.cpp',
+          lines: '14-24',
+          snippet: `<span class="hl-line">int estadoAtual = afd.getEstadoInicial();</span>\nstringstream ss;\nss << estados[estadoAtual].nome;`,
+          vars: { 'palavra': `"${palavra}"`, 'estadoAtual': afd.estados[estadoAtual].nome }
+        }
+      });
+
+      for (let i = 0; i < palavra.length; i++) {
+        const c = palavra[i];
+        const prox = afd.getDestinoAFD(estadoAtual, c);
+
+        if (prox === -1) {
+          eventosTeste.push({
+            tipo: 'SEM_TRANSICAO',
+            indiceFita: i,
+            estadoAtual,
+            simbolo: c,
+            log: `Caractere '${c}' não tem transição -> REJEITADA!`,
+            codeTrace: {
+              file: 'src/Reconhecer.cpp',
+              lines: '29-33',
+              snippet: `int proximo = afd.getDestinoAFD(estadoAtual, '${c}');\n<span class="hl-line">if (proximo == -1) return false;</span>`,
+              vars: { 'simbolo': `'${c}'`, 'proximo': '-1 (sem transição)', 'resultado': 'REJEITADA' }
+            }
+          });
+          return eventosTeste;
+        }
+
+        const caiuErro = (prox === estadoErro);
+
+        eventosTeste.push({
+          tipo: 'PASSO_FITA',
+          indiceFita: i,
+          simbolo: c,
+          estadoOrigem: estadoAtual,
+          estadoAtual: prox,
+          caiuErro,
+          log: `Lendo '${c}': transição (${afd.estados[estadoAtual].nome}) --${c}--> (${afd.estados[prox].nome})${caiuErro ? ' [CAIU NO ESTADO DE ERRO!]' : ''}`,
+          codeTrace: {
+            file: 'src/Reconhecer.cpp',
+            lines: '27-42',
+            snippet: `int proximo = afd.getDestinoAFD(estadoAtual, '${c}');\nestadoAtual = proximo;\n<span class="hl-line">if (estadoAtual == estadoErro) return false;</span>`,
+            vars: {
+              'simboloLido': `'${c}'`,
+              'estadoAtual': afd.estados[prox].nome,
+              'estadoErro': afd.estados[estadoErro].nome,
+              'caiuNoErro': caiuErro ? 'SIM (rejeição imediata)' : 'não'
+            }
+          }
+        });
+
+        estadoAtual = prox;
+        if (caiuErro) break;
+      }
+
+      const estFinal = afd.estados[estadoAtual];
+      const aceita = estFinal.final && estadoAtual !== estadoErro;
+
+      eventosTeste.push({
+        tipo: 'VEREDITO',
+        indiceFita: palavra.length,
+        estadoAtual,
+        aceita,
+        tokens: estFinal.tokens,
+        log: aceita 
+          ? `Sentença ACEITA com sucesso! Token identificado: [${estFinal.tokens.join(', ')}]`
+          : `Sentença REJEITADA: término em estado não-final (${estFinal.nome}).`,
+        codeTrace: {
+          file: 'src/Reconhecer.cpp',
+          lines: '45-62',
+          snippet: `<span class="hl-line">if (estFinal.final && estadoAtual != estadoErro) {\n    identificacoes = estFinal.tokens;\n    return true;\n} else {\n    return false;\n}</span>`,
+          vars: {
+            'estadoTermino': estFinal.nome,
+            'ehFinal': estFinal.final ? 'true' : 'false',
+            'ehErro': (estadoAtual === estadoErro) ? 'true' : 'false',
+            'retorno': aceita ? 'TRUE (ACEITA)' : 'FALSE (REJEITADA)',
+            'token': aceita ? estFinal.tokens.join(', ') : 'nenhum'
+          }
+        }
+      });
+
+      return eventosTeste;
+    }
+
+    /* =====================================================================
+       5. SISTEMA DE AUTO-ORGANIZAÇÃO FÍSICA DINÂMICA (FORCE-DIRECTED)
+       ===================================================================== */
+    const canvas = document.getElementById('automatonCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let nodePositions = new Map(); // id -> { x, y, vx, vy, targetX, targetY, isDragging }
+    let zoomLevel = 1.0;
+    let panOffset = { x: 0, y: 0 };
+    let isDragging = false;
+    let draggedNode = null;
+    let lastMousePos = { x: 0, y: 0 };
+    let autoLayoutEnabled = true;
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * window.devicePixelRatio;
+      canvas.height = rect.height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Algoritmo de Camadas Topológicas Automáticas
+    function calculateIdealPositions(automato) {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      const n = automato.estados.length;
+      if (n === 0) return;
+
+      const inicial = automato.estadoInicial;
+      const erro = automato.estadoErro;
+
+      // 1. Calcula nível / profundidade topológica via BFS a partir do estado inicial
+      const niveis = new Map();
+      niveis.set(inicial, 0);
+      const fila = [inicial];
+
+      while (fila.length > 0) {
+        const u = fila.shift();
+        const nivU = niveis.get(u);
+        for (let t of automato.transicoes) {
+          if (t.origem === u && t.origem !== t.destino && t.destino !== erro) {
+            if (!niveis.has(t.destino)) {
+              niveis.set(t.destino, nivU + 1);
+              fila.push(t.destino);
+            }
+          }
+        }
+      }
+
+      // Estados não alcançados por BFS recebem nível 1
+      for (let est of automato.estados) {
+        if (!niveis.has(est.id) && est.id !== erro) {
+          niveis.set(est.id, 1);
+        }
+      }
+
+      let maxNivel = 0;
+      niveis.forEach(niv => { if (niv > maxNivel) maxNivel = niv; });
+      maxNivel = Math.max(1, maxNivel);
+
+      // Agrupa estados por nível
+      const colunas = Array.from({ length: maxNivel + 1 }, () => []);
+      niveis.forEach((niv, id) => {
+        colunas[niv].push(id);
+      });
+
+      const margemX = 70;
+      const larguraUtil = Math.max(200, w - margemX * 2 - (erro >= 0 ? 80 : 0));
+      const passoX = larguraUtil / (maxNivel || 1);
+
+      // Define posições alvo ideais
+      for (let niv = 0; niv <= maxNivel; niv++) {
+        const estadosNaColuna = colunas[niv];
+        const qtd = estadosNaColuna.length;
+        const targetX = margemX + niv * passoX;
+
+        for (let i = 0; i < qtd; i++) {
+          const id = estadosNaColuna[i];
+          const targetY = (h / (qtd + 1)) * (i + 1);
+
+          if (!nodePositions.has(id)) {
+            nodePositions.set(id, {
+              x: targetX + (Math.random() - 0.5) * 20,
+              y: targetY + (Math.random() - 0.5) * 20,
+              vx: 0,
+              vy: 0,
+              targetX,
+              targetY
+            });
+          } else {
+            const node = nodePositions.get(id);
+            node.targetX = targetX;
+            node.targetY = targetY;
+          }
+        }
+      }
+
+      // Fixa a posição alvo do estado de erro isolado no canto
+      if (erro >= 0) {
+        const targetX = w - 80;
+        const targetY = h - 65;
+        if (!nodePositions.has(erro)) {
+          nodePositions.set(erro, { x: targetX, y: targetY, vx: 0, vy: 0, targetX, targetY });
+        } else {
+          const nErr = nodePositions.get(erro);
+          nErr.targetX = targetX;
+          nErr.targetY = targetY;
+        }
+      }
+    }
+
+    // Física e amortecimento executados a cada frame de renderização
+    function updatePhysics() {
+      if (!autoLayoutEnabled) return;
+
+      const damping = 0.82;
+      const kAttract = 0.08;
+      const kRepel = 2400;
+
+      nodePositions.forEach((node, id) => {
+        if (draggedNode === id) return; // Não interfere se o usuário estiver arrastando
+
+        // 1. Força de atração em direção à sua posição topológica ideal
+        if (node.targetX !== undefined) {
+          node.vx += (node.targetX - node.x) * kAttract;
+          node.vy += (node.targetY - node.y) * kAttract;
+        }
+
+        // 2. Força de repulsão entre nós para evitar sobreposição
+        nodePositions.forEach((otherNode, otherId) => {
+          if (id === otherId) return;
+          const dx = node.x - otherNode.x;
+          const dy = node.y - otherNode.y;
+          const distSq = dx * dx + dy * dy || 1;
+          const dist = Math.sqrt(distSq);
+
+          if (dist < 80) {
+            const force = kRepel / distSq;
+            node.vx += (dx / dist) * force;
+            node.vy += (dy / dist) * force;
+          }
+        });
+
+        // Aplica velocidade e amortecimento suave
+        node.vx *= damping;
+        node.vy *= damping;
+        node.x += node.vx;
+        node.y += node.vy;
+      });
+    }
+
+    // Loop contínuo com requestAnimationFrame
+    function animationLoop() {
+      updatePhysics();
+      drawAutomaton();
+      requestAnimationFrame(animationLoop);
+    }
+
+    function drawAutomaton() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+
+      ctx.save();
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.translate(panOffset.x, panOffset.y);
+      ctx.scale(zoomLevel, zoomLevel);
+
+      const currentEvt = timelineEvents[currentEventIndex];
+      const automato = currentEvt ? currentEvt.automato : (afdFinalModel || afndModel);
+
+      if (!automato || automato.estados.length === 0) {
+        ctx.restore();
+        return;
+      }
+
+      const highlight = currentEvt ? currentEvt.destaque : null;
+
+      // Garante posições de nós recém-adicionados
+      for (let est of automato.estados) {
+        if (!nodePositions.has(est.id)) {
+          calculateIdealPositions(automato);
+          break;
+        }
+      }
+
+      // Agrupa transições entre mesmos pares
+      const edgeGroups = new Map();
+      for (let t of automato.transicoes) {
+        const key = `${t.origem}->${t.destino}`;
+        if (!edgeGroups.has(key)) edgeGroups.set(key, []);
+        edgeGroups.get(key).push(t.simbolo);
+      }
+
+      // 1. DESENHAR TRANSIÇÕES (ARESTAS)
+      edgeGroups.forEach((simbolos, key) => {
+        const [origStr, destStr] = key.split('->');
+        const origId = parseInt(origStr);
+        const destId = parseInt(destStr);
+
+        const p1 = nodePositions.get(origId);
+        const p2 = nodePositions.get(destId);
+        if (!p1 || !p2) return;
+
+        const isHighlighted = highlight && 
+          ((highlight.origem === origId && highlight.destino === destId) ||
+           (highlight.estadoOrigem === origId && highlight.estadoAtual === destId) ||
+           (highlight.transicao && highlight.transicao.origem === origId && highlight.transicao.destino === destId));
+
+        const isSelfLoop = (origId === destId);
+        const labelText = simbolos.join(',');
+
+        ctx.lineWidth = isHighlighted ? 3 : 1.5;
+        ctx.strokeStyle = isHighlighted ? '#38bdf8' : 'rgba(148, 163, 184, 0.45)';
+
+        if (isSelfLoop) {
+          const loopRadius = 20;
+          const loopCenterX = p1.x;
+          const loopCenterY = p1.y - 32;
+
+          ctx.beginPath();
+          ctx.arc(loopCenterX, loopCenterY, loopRadius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          drawArrowHead(loopCenterX + loopRadius - 2, loopCenterY + 4, Math.PI / 1.5, ctx.strokeStyle);
+          drawEdgeLabel(loopCenterX, loopCenterY - loopRadius - 3, labelText, isHighlighted);
+        } else {
+          const hasReverse = edgeGroups.has(`${destId}->${origId}`);
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist === 0) return;
+
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          const nodeRadius = 20;
+          const startX = p1.x + nx * nodeRadius;
+          const startY = p1.y + ny * nodeRadius;
+          const endX = p2.x - nx * (nodeRadius + 4);
+          const endY = p2.y - ny * (nodeRadius + 4);
+
+          if (hasReverse) {
+            const curvature = 26;
+            const orthoX = -ny * curvature;
+            const orthoY = nx * curvature;
+            const midX = (startX + endX) / 2 + orthoX;
+            const midY = (startY + endY) / 2 + orthoY;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(midX, midY, endX, endY);
+            ctx.stroke();
+
+            const angle = Math.atan2(endY - midY, endX - midX);
+            drawArrowHead(endX, endY, angle, ctx.strokeStyle);
+            drawEdgeLabel(midX, midY, labelText, isHighlighted);
+          } else {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+
+            const angle = Math.atan2(endY - startY, endX - startX);
+            drawArrowHead(endX, endY, angle, ctx.strokeStyle);
+            drawEdgeLabel((startX + endX) / 2, (startY + endY) / 2 - 7, labelText, isHighlighted);
+          }
+        }
+      });
+
+      // 2. DESENHAR ESTADOS (NÓS)
+      for (let est of automato.estados) {
+        const pos = nodePositions.get(est.id);
+        if (!pos) continue;
+
+        const isInit = (est.id === automato.estadoInicial);
+        const isFin = est.final;
+        const isErr = (est.isErro || est.id === automato.estadoErro);
+
+        const isActive = highlight && (
+          highlight.estado === est.id || 
+          highlight.estadoAtual === est.id ||
+          highlight.origem === est.id ||
+          highlight.destino === est.id
+        );
+
+        const radius = 20;
+
+        // Seta indicativa de estado inicial (->)
+        if (isInit) {
+          ctx.strokeStyle = '#38bdf8';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.moveTo(pos.x - radius - 24, pos.y);
+          ctx.lineTo(pos.x - radius - 4, pos.y);
+          ctx.stroke();
+          drawArrowHead(pos.x - radius - 4, pos.y, 0, '#38bdf8');
+        }
+
+        // Glow do estado ativo
+        if (isActive) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, radius + 7, 0, Math.PI * 2);
+          ctx.fillStyle = isErr ? 'rgba(239, 68, 68, 0.4)' : 'rgba(56, 189, 248, 0.4)';
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Círculo principal do nó
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, radius, 0, Math.PI * 2);
+        if (isErr) {
+          ctx.fillStyle = '#450a0a';
+          ctx.strokeStyle = '#ef4444';
+        } else if (isActive) {
+          ctx.fillStyle = '#1e3a8a';
+          ctx.strokeStyle = '#60a5fa';
+        } else {
+          ctx.fillStyle = '#1e293b';
+          ctx.strokeStyle = isFin ? '#10b981' : '#475569';
+        }
+        ctx.lineWidth = isFin ? 3 : 2;
+        ctx.fill();
+        ctx.stroke();
+
+        // Borda dupla se for estado FINAL
+        if (isFin) {
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, radius - 4, 0, Math.PI * 2);
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        // Nome do estado
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px var(--font-mono)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(est.nome, pos.x, pos.y);
+
+        // Subtítulo de Tokens abaixo do nó se for final
+        if (isFin && est.tokens.length > 0) {
+          ctx.fillStyle = '#c084fc';
+          ctx.font = '9.5px var(--font-mono)';
+          ctx.fillText(`[${est.tokens[0]}]`, pos.x, pos.y + radius + 11);
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function drawArrowHead(x, y, angle, color) {
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-8, -4);
+      ctx.lineTo(-8, 4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawEdgeLabel(x, y, text, isHighlighted) {
+      ctx.save();
+      ctx.font = 'bold 10px var(--font-mono)';
+      const metrics = ctx.measureText(text);
+      const padding = 2.5;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.fillRect(x - metrics.width / 2 - padding, y - 5 - padding, metrics.width + padding * 2, 12 + padding);
+
+      ctx.fillStyle = isHighlighted ? '#38bdf8' : '#cbd5e1';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    // Interações de mouse
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+      const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+
+      draggedNode = null;
+      nodePositions.forEach((pos, id) => {
+        const dx = pos.x - mouseX;
+        const dy = pos.y - mouseY;
+        if (Math.sqrt(dx * dx + dy * dy) <= 22) {
+          draggedNode = id;
+        }
+      });
+
+      if (draggedNode === null) {
+        isDragging = true;
+        lastMousePos = { x: e.clientX, y: e.clientY };
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (draggedNode !== null) {
+        const rect = canvas.getBoundingClientRect();
+        const node = nodePositions.get(draggedNode);
+        if (node) {
+          node.x = (e.clientX - rect.left - panOffset.x) / zoomLevel;
+          node.y = (e.clientY - rect.top - panOffset.y) / zoomLevel;
+          node.targetX = node.x;
+          node.targetY = node.y;
+        }
+      } else if (isDragging) {
+        const dx = e.clientX - lastMousePos.x;
+        const dy = e.clientY - lastMousePos.y;
+        panOffset.x += dx;
+        panOffset.y += dy;
+        lastMousePos = { x: e.clientX, y: e.clientY };
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      draggedNode = null;
+      isDragging = false;
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+      zoomLevel = Math.max(0.4, Math.min(2.5, zoomLevel * zoomFactor));
+    });
+
+    /* =====================================================================
+       6. ATUALIZAÇÃO DA TABELA DE TRANSIÇÃO E PAINEL C++ TRACER
+       ===================================================================== */
+    function renderTransitionTable(automato, highlight = null) {
+      const theadRow = document.getElementById('tableHeaderRow');
+      const tbody = document.getElementById('tableBody');
+
+      if (!automato || automato.estados.length === 0) {
+        theadRow.innerHTML = '<th>Estado (δ)</th><th>Tokens</th>';
+        tbody.innerHTML = '<tr><td colspan="2" style="color: #64748b;">(Autômato vazio)</td></tr>';
+        return;
+      }
+
+      const alfabeto = Array.from(automato.alfabeto).sort();
+
+      let thHTML = '<th style="text-align: left; padding-left: 8px;">Estado (δ)</th>';
+      for (let c of alfabeto) {
+        thHTML += `<th>${c}</th>`;
+      }
+      thHTML += '<th style="text-align: left; padding-left: 8px;">Tokens</th>';
+      theadRow.innerHTML = thHTML;
+
+      let tbodyHTML = '';
+      for (let est of automato.estados) {
+        const isInit = (est.id === automato.estadoInicial);
+        const isFin = est.final;
+        const isErr = (est.isErro || est.id === automato.estadoErro);
+
+        let rotulo = '';
+        if (isInit) rotulo += '-> ';
+        if (isFin) rotulo += '* ';
+        if (isErr) rotulo += 'E ';
+
+        const isRowActive = highlight && (highlight.estado === est.id || highlight.origem === est.id || highlight.estadoAtual === est.id);
+        const isDeadRow = highlight && highlight.motivo && highlight.estadoRemovido === est.id;
+
+        tbodyHTML += `<tr class="${isDeadRow ? 'state-dead-row' : ''}" id="row-state-${est.id}">`;
+        tbodyHTML += `<td class="state-name ${isRowActive ? 'cell-active' : ''}">${rotulo}${est.nome}</td>`;
+
+        for (let c of alfabeto) {
+          const dests = automato.getDestinos(est.id, c);
+          let textoCelula = '-';
+          let celulaClass = '';
+
+          if (dests.length > 0) {
+            textoCelula = dests.map(id => automato.estados[id].nome).join(',');
+            if (dests.length > 1) {
+              celulaClass = 'cell-indeterminism';
+            }
+          }
+
+          const isCellHighlighted = highlight && 
+            ((highlight.origem === est.id && highlight.simbolo === c) ||
+             (highlight.estadoOrigem === est.id && highlight.simbolo === c));
+
+          if (isCellHighlighted) {
+            celulaClass = 'cell-active';
+          }
+
+          if (highlight && highlight.celulasPreenchidas && isErr && textoCelula === 'Erro') {
+            celulaClass = 'cell-error-added';
+          }
+
+          tbodyHTML += `<td class="${celulaClass}">${textoCelula}</td>`;
+        }
+
+        let tokensStr = est.tokens.join(', ');
+        if (!tokensStr && isErr) tokensStr = '[ERRO]';
+
+        tbodyHTML += `<td class="tokens-col">${tokensStr || '-'}</td>`;
+        tbodyHTML += `</tr>`;
+      }
+
+      tbody.innerHTML = tbodyHTML;
+    }
+
+    function updateCodeTracer(trace) {
+      if (!trace) return;
+
+      document.getElementById('tracerFile').innerText = trace.file;
+      document.getElementById('tracerLine').innerText = `Linha ${trace.lines}`;
+      document.getElementById('tracerSnippet').innerHTML = trace.snippet;
+
+      const varsContainer = document.getElementById('tracerVars');
+      varsContainer.innerHTML = '';
+      if (trace.vars) {
+        for (let [k, v] of Object.entries(trace.vars)) {
+          const pill = document.createElement('span');
+          pill.className = 'var-pill';
+          pill.innerHTML = `<span class="var-name">${k}:</span> <span class="var-val">${v}</span>`;
+          varsContainer.appendChild(pill);
+        }
+      }
+    }
+
+    function renderCurrentEvent() {
+      if (timelineEvents.length === 0) return;
+
+      const evt = timelineEvents[currentEventIndex];
+      const automato = evt.automato;
+
+      // Auto-reorganização automática a cada evento
+      if (autoLayoutEnabled) {
+        calculateIdealPositions(automato);
+      }
+
+      document.querySelectorAll('.step-btn[data-step]').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.step) === evt.etapa);
+      });
+
+      document.getElementById('tableStepBadge').innerText = `Etapa ${evt.etapa} de 5`;
+      document.getElementById('stateCountBadge').innerText = `${automato.estados.length} estados • ${automato.transicoes.length} transições`;
+
+      if (evt.explicacao) {
+        document.getElementById('stepExplanation').innerText = evt.explicacao;
+      }
+
+      if (evt.codeTrace) {
+        updateCodeTracer(evt.codeTrace);
+      }
+
+      if (evt.log) {
+        addConsoleLog(evt.log.tag, evt.log.msg);
+      }
+
+      renderTransitionTable(automato, evt.destaque);
+    }
+
+    function addConsoleLog(tag, msg) {
+      const logsContainer = document.getElementById('consoleLogs');
+      const div = document.createElement('div');
+      div.className = 'log-line';
+
+      const tagSpan = document.createElement('span');
+      tagSpan.className = `log-tag ${tag}`;
+      tagSpan.innerText = `[${tag.toUpperCase()}]`;
+
+      const msgSpan = document.createElement('span');
+      msgSpan.innerText = msg;
+
+      div.appendChild(tagSpan);
+      div.appendChild(msgSpan);
+      logsContainer.appendChild(div);
+      logsContainer.scrollTop = logsContainer.scrollHeight;
+    }
+
+    function play() {
+      if (isPlaying) return;
+      isPlaying = true;
+      document.getElementById('btnPlayPause').innerText = '⏸';
+      document.getElementById('btnPlayPause').style.background = '#eab308';
+
+      playTimer = setInterval(() => {
+        if (currentEventIndex < timelineEvents.length - 1) {
+          currentEventIndex++;
+          renderCurrentEvent();
+        } else {
+          pause();
+        }
+      }, playbackSpeed);
+    }
+
+    function pause() {
+      isPlaying = false;
+      if (playTimer) clearInterval(playTimer);
+      document.getElementById('btnPlayPause').innerText = '▶';
+      document.getElementById('btnPlayPause').style.background = '#2563eb';
+    }
+
+    function togglePlayPause() {
+      if (isPlaying) pause();
+      else play();
+    }
+
+    function nextStep() {
+      pause();
+      if (currentEventIndex < timelineEvents.length - 1) {
+        currentEventIndex++;
+        renderCurrentEvent();
+      }
+    }
+
+    function prevStep() {
+      pause();
+      if (currentEventIndex > 0) {
+        currentEventIndex--;
+        renderCurrentEvent();
+      }
+    }
+
+    function jumpToStep(targetStep) {
+      pause();
+      const idx = timelineEvents.findIndex(e => e.etapa === targetStep);
+      if (idx !== -1) {
+        currentEventIndex = idx;
+        renderCurrentEvent();
+      }
+    }
+
+    /* =====================================================================
+       7. GRAVADOR DE VÍDEO (.WEBM)
+       ===================================================================== */
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let isRecording = false;
+
+    async function toggleVideoRecording() {
+      const recordBtn = document.getElementById('btnRecordVideo');
+      const recordIcon = document.getElementById('recordIcon');
+      const recordText = document.getElementById('recordText');
+
+      if (!isRecording) {
+        try {
+          const stream = canvas.captureStream(30);
+          recordedChunks = [];
+          mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+          };
+
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `LFA-AFD-Motion-Video-${Date.now()}.webm`;
+            a.click();
+            URL.revokeObjectURL(url);
+            addConsoleLog('success', 'Vídeo exportado com sucesso em formato WebM!');
+          };
+
+          mediaRecorder.start();
+          isRecording = true;
+          recordBtn.classList.add('recording');
+          recordIcon.innerText = '⏹';
+          recordText.innerText = 'Parar & Salvar';
+          addConsoleLog('warn', 'Gravação iniciada! Dê Play na timeline para capturar a animação.');
+        } catch (err) {
+          alert('Erro ao iniciar gravação de vídeo: ' + err.message);
+        }
+      } else {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordBtn.classList.remove('recording');
+        recordIcon.innerText = '⏺';
+        recordText.innerText = 'Gravar Vídeo';
+      }
+    }
+
+    /* =====================================================================
+       8. SIMULAÇÃO INTERATIVA DA SENTENÇA (FITA DE LEITURA & C++ TRACE)
+       ===================================================================== */
+    function runSentenceTest() {
+      const palavra = document.getElementById('testSentenceInput').value.trim();
+      const tapeContainer = document.getElementById('tapeContainer');
+      const resultBadge = document.getElementById('resultBadge');
+
+      if (!palavra) return;
+
+      tapeContainer.innerHTML = '';
+      for (let i = 0; i < palavra.length; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'tape-cell';
+        cell.id = `tape-cell-${i}`;
+        cell.innerText = palavra[i];
+        tapeContainer.appendChild(cell);
+      }
+
+      resultBadge.className = 'result-badge running';
+      resultBadge.innerText = 'PROCESSANDO...';
+
+      jumpToStep(5);
+
+      const passos = simularSentenca(palavra);
+      let stepIdx = 0;
+
+      const timerTest = setInterval(() => {
+        if (stepIdx < passos.length) {
+          const p = passos[stepIdx];
+
+          document.querySelectorAll('.tape-cell').forEach(c => c.classList.remove('active'));
+          if (p.indiceFita >= 0 && p.indiceFita < palavra.length) {
+            const cell = document.getElementById(`tape-cell-${p.indiceFita}`);
+            if (cell) cell.classList.add('active');
+          }
+
+          if (p.codeTrace) updateCodeTracer(p.codeTrace);
+
+          renderTransitionTable(afdFinalModel, {
+            origem: p.estadoOrigem !== undefined ? p.estadoOrigem : p.estadoAtual,
+            simbolo: p.simbolo,
+            estadoAtual: p.estadoAtual
+          });
+
+          if (p.log) addConsoleLog(p.tipo === 'VEREDITO' ? (p.aceita ? 'success' : 'error') : 'info', p.log);
+
+          if (p.tipo === 'VEREDITO') {
+            resultBadge.className = p.aceita ? 'result-badge accepted' : 'result-badge rejected';
+            resultBadge.innerText = p.aceita ? `ACEITA: ${p.tokens.join(', ')}` : 'REJEITADA';
+          }
+
+          stepIdx++;
+        } else {
+          clearInterval(timerTest);
+        }
+      }, Math.max(300, playbackSpeed * 0.7));
+    }
+
+    /* =====================================================================
+       9. INICIALIZAÇÃO
+       ===================================================================== */
+    function initialize() {
+      resizeCanvas();
+
+      document.getElementById('inputCode').value = SAMPLES.professor;
+      recarregarPipeline();
+
+      // Botões de Playback
+      document.getElementById('btnPlayPause').addEventListener('click', togglePlayPause);
+      document.getElementById('btnNextStep').addEventListener('click', nextStep);
+      document.getElementById('btnPrevStep').addEventListener('click', prevStep);
+      document.getElementById('btnRestart').addEventListener('click', () => {
+        pause();
+        currentEventIndex = 0;
+        renderCurrentEvent();
+      });
+      document.getElementById('btnForwardStep').addEventListener('click', () => {
+        pause();
+        const currentEtapa = timelineEvents[currentEventIndex].etapa;
+        const nextIdx = timelineEvents.findIndex(e => e.etapa > currentEtapa);
+        if (nextIdx !== -1) {
+          currentEventIndex = nextIdx;
+          renderCurrentEvent();
+        }
+      });
+
+      // Seletor de Velocidade
+      document.getElementById('speedSelect').addEventListener('change', (e) => {
+        playbackSpeed = parseInt(e.target.value);
+        if (isPlaying) {
+          pause();
+          play();
+        }
+      });
+
+      // Passos na barra superior
+      document.querySelectorAll('.step-btn[data-step]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          jumpToStep(parseInt(btn.dataset.step));
+        });
+      });
+
+      // Exemplo selecionado
+      document.getElementById('samplePicker').addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (SAMPLES[val]) {
+          document.getElementById('inputCode').value = SAMPLES[val];
+          recarregarPipeline();
+        }
+      });
+
+      document.getElementById('btnProcessInput').addEventListener('click', recarregarPipeline);
+      document.getElementById('btnClearLogs').addEventListener('click', () => {
+        document.getElementById('consoleLogs').innerHTML = '';
+      });
+
+      // Botões do Canvas
+      document.getElementById('btnResetView').addEventListener('click', () => {
+        zoomLevel = 1.0;
+        panOffset = { x: 0, y: 0 };
+        const curr = timelineEvents[currentEventIndex];
+        if (curr && curr.automato) calculateIdealPositions(curr.automato);
+      });
+
+      const btnAutoLayout = document.getElementById('btnToggleAutoLayout');
+      btnAutoLayout.addEventListener('click', () => {
+        autoLayoutEnabled = !autoLayoutEnabled;
+        btnAutoLayout.classList.toggle('active-auto', autoLayoutEnabled);
+        btnAutoLayout.innerText = autoLayoutEnabled ? '✨ Auto-Organização: ON' : '⏸ Auto-Organização: OFF';
+      });
+
+      // Exportar PNG
+      document.getElementById('btnExportGraph').addEventListener('click', () => {
+        const url = canvas.toDataURL('image/png');
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Automato-Grafo-LFA-${Date.now()}.png`;
+        a.click();
+      });
+
+      // Gravar Vídeo
+      document.getElementById('btnRecordVideo').addEventListener('click', toggleVideoRecording);
+
+      // Sentença de Teste
+      document.getElementById('btnRunTest').addEventListener('click', runSentenceTest);
+      document.getElementById('testSentenceInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') runSentenceTest();
+      });
+
+      // Inicia loop de renderização com requestAnimationFrame
+      requestAnimationFrame(animationLoop);
+    }
+
+    function recarregarPipeline() {
+      pause();
+      document.getElementById('consoleLogs').innerHTML = '';
+      const text = document.getElementById('inputCode').value;
+
+      buildPipeline(text);
+      currentEventIndex = 0;
+
+      if (timelineEvents.length > 0) {
+        nodePositions.clear();
+        calculateIdealPositions(timelineEvents[0].automato);
+        renderCurrentEvent();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initialize);
+  </script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aula — Arquitetura do projeto lfa-afd</title>
+<script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+<style>
+  body { background: var(--background, #f8fafc); color: var(--foreground, #0f172a); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.6; }
+  .card { background: var(--card, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 14px; padding: 22px 24px; margin-bottom: 22px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .muted { color: var(--muted-foreground, #64748b); }
+  .bd { border-color: var(--border, #e2e8f0); }
+  .acc { background: var(--accent, #f1f5f9); }
+  .pri { background: var(--primary, #2563eb); color: var(--primary-foreground, #fff); }
+  h2.sec { font-size: 1.35rem; font-weight: 700; display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  h3 { font-weight: 650; margin: 16px 0 6px; }
+  .icon { width: 42px; height: 42px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .path { font-family: ui-monospace, Consolas, monospace; font-size: 13px; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--border, #e2e8f0); }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: var(--accent, #f1f5f9); padding: 1px 5px; border-radius: 4px; }
+  pre { font-family: ui-monospace, Consolas, monospace; font-size: 13px; background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 10px; overflow-x: auto; margin: 10px 0; line-height: 1.55; }
+  pre .k { color: #93c5fd; } pre .c { color: #94a3b8; font-style: italic; } pre .s { color: #fcd34d; } pre .r { color: #fca5a5; }
+  table.t { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 14px; }
+  table.t th, table.t td { border: 1px solid var(--border, #e2e8f0); padding: 6px 10px; text-align: left; vertical-align: top; }
+  table.t th { background: var(--accent, #f1f5f9); font-weight: 600; }
+  table.c td, table.c th { text-align: center; }
+  .call { border-left: 4px solid; border-radius: 8px; padding: 10px 14px; margin: 12px 0; font-size: 14px; }
+  .call.info { border-color: #3b82f6; background: rgba(59,130,246,.08); }
+  .call.tip  { border-color: #22c55e; background: rgba(34,197,94,.08); }
+  .call.warn { border-color: #f59e0b; background: rgba(245,158,11,.10); }
+  .call.ask  { border-color: #a855f7; background: rgba(168,85,247,.08); }
+  .io { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 4px; font-size: 14px; }
+  .chip { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border, #e2e8f0); background: var(--accent, #f1f5f9); }
+  .resp { font-size: 15px; margin: 6px 0 4px; }
+  .err { background: rgba(248,113,113,.18); color: #dc2626; font-weight: 600; }
+  .fin { font-weight: 700; color: #16a34a; }
+  nav a { display: block; padding: 5px 10px; border-radius: 8px; font-size: 14px; color: inherit; text-decoration: none; }
+  nav a:hover, nav a.on { background: var(--accent, #f1f5f9); }
+  .pipe { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; margin: 14px 0; }
+  .pipe .st { flex: 1 1 110px; border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 10px; text-align: center; font-size: 13px; background: var(--card, #fff); }
+  .pipe .st b { display: block; font-size: 14px; }
+  .pipe .ar { align-self: center; font-size: 20px; color: var(--muted-foreground, #64748b); }
+  svg .nd circle { fill: var(--card, #fff); stroke: var(--muted-foreground, #64748b); stroke-width: 2; }
+  svg .nd.f circle.o { fill: none; }
+  svg .nd.e circle { stroke: #dc2626; stroke-dasharray: 4 3; }
+  svg .nd text { fill: var(--foreground, #0f172a); font-size: 13px; font-weight: 600; }
+  svg .nd text.sub { fill: var(--muted-foreground, #64748b); font-size: 12px; font-weight: 400; }
+  svg .ed path { stroke: var(--muted-foreground, #64748b); stroke-width: 1.6; fill: none; }
+  svg .ed text { fill: var(--foreground, #0f172a); font-size: 12px; }
+  svg .ed.x path { stroke: #ef4444; stroke-width: 2.6; }
+  svg .ed.x text { fill: #ef4444; font-weight: 700; }
+  .fig { border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 8px; margin: 10px 0; }
+  .figcap { font-size: 13px; text-align: center; margin-top: 4px; }
+  details { border: 1px solid var(--border, #e2e8f0); border-radius: 10px; padding: 10px 14px; margin: 8px 0; }
+  summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="max-w-6xl mx-auto px-4 py-6 flex gap-6">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="hidden lg:block w-60 shrink-0">
+    <nav class="sticky top-4 card" style="padding:12px" id="nav">
+      <div class="font-bold mb-2 px-2">📘 Sumário</div>
+      <a href="#s0">🗺️ 0. Visão geral</a>
+      <a href="#s1">🧱 1. Automato</a>
+      <a href="#s2">📄 2. LeitorArquivo</a>
+      <a href="#s3">🔁 3. LeitorGramatica</a>
+      <a href="#s4">🔀 4. Determinizar</a>
+      <a href="#s5">🧹 5. Minimizar</a>
+      <a href="#s6">🚫 6. CompletarAutomato</a>
+      <a href="#s7">✅ 7. VerificarEstados</a>
+      <a href="#s8">🕹️ 8. Reconhecer</a>
+      <a href="#s9">🎼 9. main</a>
+      <a href="#s10">🧰 10. Arquivos de apoio</a>
+      <a href="#s11">🎯 11. Pontos técnicos</a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold">📘 Aula: a arquitetura do projeto <code style="font-size:1.6rem">lfa-afd</code></h1>
+      <p class="muted mt-1">Entender <b>o que cada arquivo faz</b>, <b>qual lógica ele usa</b> e <b>como os dados passam de um para o outro</b>, sempre com o exemplo real <code>exemplos/professor.txt</code>.</p>
+    </header>
+
+    <!-- ============ 0 VISÃO GERAL ============ -->
+    <section id="s0" class="card">
+      <h2 class="sec"><span class="icon acc">🗺️</span>0. Visão geral em uma tela</h2>
+      <p>O programa é uma <b>esteira (pipeline)</b>. Cada etapa recebe um objeto <code>Automato</code>, transforma e entrega um novo <code>Automato</code> para a etapa seguinte.</p>
+      <div class="pipe">
+        <div class="st">📄<b>professor.txt</b><span class="muted">texto</span></div><div class="ar">➜</div>
+        <div class="st">🕸️<b>AFND</b><span class="muted">14 estados</span></div><div class="ar">➜</div>
+        <div class="st">🔀<b>AFD</b><span class="muted">12 estados</span></div><div class="ar">➜</div>
+        <div class="st">🧹<b>AFD mínimo</b><span class="muted">12 estados</span></div><div class="ar">➜</div>
+        <div class="st">🚫<b>AFD completo</b><span class="muted">13 (com Erro)</span></div><div class="ar">➜</div>
+        <div class="st">🕹️<b>Reconhecer</b><span class="muted">aceita / rejeita</span></div>
+      </div>
+      <table class="t">
+        <tr><th>Etapa</th><th>Arquivo</th><th>Função principal</th><th>Entra</th><th>Sai</th></tr>
+        <tr><td>1. Carga</td><td><code>LeitorArquivo.cpp</code></td><td><code>carregarArquivo</code></td><td>caminho do .txt</td><td>AFND</td></tr>
+        <tr><td>2. Determinização</td><td><code>Determinizar.cpp</code></td><td><code>determinizar</code></td><td>AFND</td><td>AFD</td></tr>
+        <tr><td>3. Minimização</td><td><code>Minimizar.cpp</code></td><td><code>minimizarAFD</code></td><td>AFD</td><td>AFD sem inalcançáveis e mortos</td></tr>
+        <tr><td>4. Estado de erro</td><td><code>CompletarAutomato.cpp</code></td><td><code>completarAFD</code></td><td>AFD (por referência)</td><td>o mesmo AFD, completo</td></tr>
+        <tr><td>5. Verificação</td><td><code>VerificarEstados.cpp</code></td><td><code>verificarEstados</code></td><td>AFD final</td><td>relatório no console</td></tr>
+        <tr><td>6. Reconhecimento</td><td><code>Reconhecer.cpp</code></td><td><code>reconhecerComRastro</code></td><td>AFD + palavra</td><td>true/false + caminho</td></tr>
+        <tr><td>Base de tudo</td><td><code>Automato.h / .cpp</code></td><td>classe <code>Automato</code></td><td>—</td><td>—</td></tr>
+        <tr><td>Orquestrador</td><td><code>main.cpp</code></td><td><code>main</code></td><td>argumentos</td><td>chama tudo em ordem</td></tr>
+      </table>
+      <h3>📂 Por que existem <code>include/</code> e <code>src/</code>?</h3>
+      <div class="grid md:grid-cols-2 gap-3">
+        <div class="call info"><b>.h (include/) — o "cardápio"</b><br>Só <i>declara</i> o que existe: o nome das funções e os parâmetros que recebem.</div>
+        <div class="call tip"><b>.cpp (src/) — a "cozinha"</b><br>Onde cada função é <i>implementada</i> de verdade.</div>
+      </div>
+      <p class="text-sm">O <code>main.cpp</code> só precisa conhecer os <code>.h</code>. O <code>Makefile</code> compila cada <code>.cpp</code> separadamente e depois junta (<i>linka</i>) tudo no executável <code>projeto</code>.</p>
+    </section>
+
+    <!-- ============ 1 AUTOMATO ============ -->
+    <section id="s1" class="card">
+      <h2 class="sec"><span class="icon acc">🧱</span>1. Automato.h / Automato.cpp</h2>
+      <span class="path">include/Automato.h</span> <span class="path">src/Automato.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> representar um autômato na memória. <b>Todos</b> os outros arquivos usam essa classe.</p>
+      <h3>Como a teoria vira código</h3>
+      <p class="text-sm">Na teoria, um autômato é a 5-upla <b>M = (Q, Σ, δ, q₀, F)</b>. No código, cada parte vira um campo:</p>
+      <table class="t">
+        <tr><th>Teoria</th><th>Código</th><th>Tipo</th></tr>
+        <tr><td>Q (estados)</td><td><code>estados</code></td><td><code>vector&lt;Estado&gt;</code></td></tr>
+        <tr><td>Σ (alfabeto)</td><td><code>alfabeto</code></td><td><code>set&lt;char&gt;</code> (não repete e fica ordenado)</td></tr>
+        <tr><td>δ (transições)</td><td><code>transicoes</code></td><td><code>vector&lt;Transicao&gt;</code></td></tr>
+        <tr><td>q₀ (inicial)</td><td><code>estadoInicial</code></td><td><code>int</code> (índice no vetor)</td></tr>
+        <tr><td>F (finais)</td><td>campo <code>final</code> dentro de cada <code>Estado</code></td><td><code>bool</code></td></tr>
+        <tr><td>(extra) erro</td><td><code>estadoErro</code></td><td><code>int</code></td></tr>
+      </table>
+<pre><span class="k">struct</span> Estado    { <span class="k">int</span> id; string nome; <span class="k">bool</span> final; vector&lt;string&gt; tokens; <span class="k">bool</span> isErro; };
+<span class="k">struct</span> Transicao { <span class="k">int</span> origem; <span class="k">char</span> simbolo; <span class="k">int</span> destino; <span class="k">bool</span> epsilon; };</pre>
+      <div class="call tip">💡 <b>Ideia-chave:</b> o <b>id de um estado é a posição dele no vetor</b>, então <code>estados[3]</code> é o estado de id 3. Isso simplifica tudo: para marcar "visitado", basta um <code>vector&lt;bool&gt;</code> do mesmo tamanho.</div>
+      <div class="call tip">💡 <b><code>tokens</code> é um vetor</b> porque um estado final pode reconhecer mais de um token ao mesmo tempo (por exemplo, quando um token e uma gramática terminam no mesmo lugar).</div>
+      <h3>Métodos principais</h3>
+      <table class="t">
+        <tr><th>Método</th><th>O que faz</th></tr>
+        <tr><td><code>adicionarEstado(nome)</code></td><td><code>push_back</code> no vetor; devolve o novo id (= <code>size()</code> antes de inserir)</td></tr>
+        <tr><td><code>marcarFinal(id, token)</code></td><td><code>final = true</code> e adiciona o token sem repetir (usa <code>find</code>)</td></tr>
+        <tr><td><code>adicionarTransicao(o, c, d)</code></td><td>valida os ids, guarda a transição e <b>insere <code>c</code> no alfabeto</b></td></tr>
+        <tr><td><code>getDestinos(o, c)</code></td><td>percorre todas as transições e devolve <b>todos</b> os destinos (AFND: pode haver vários)</td></tr>
+        <tr><td><code>getDestinoAFD(o, c)</code></td><td>devolve o <b>primeiro</b> destino, ou <code>-1</code> se não houver (AFD: só existe um)</td></tr>
+        <tr><td><code>temTransicao(o, c)</code></td><td><code>getDestinoAFD(o, c) != -1</code></td></tr>
+        <tr><td><code>imprimirTabela(titulo)</code></td><td>desenha a matriz δ no console (linhas = estados, colunas = símbolos)</td></tr>
+      </table>
+      <div class="call info">ℹ️ O alfabeto <b>não é informado pelo usuário</b>: ele vai sendo montado automaticamente conforme as transições são criadas.</div>
+    </section>
+
+    <!-- ============ 2 LEITOR ARQUIVO ============ -->
+    <section id="s2" class="card">
+      <h2 class="sec"><span class="icon acc">📄</span>2. LeitorArquivo.cpp — do texto para o AFND</h2>
+      <span class="path">src/LeitorArquivo.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> ler o .txt e montar o <b>AFND</b> seguindo a regra do professor: <i>só o estado inicial é compartilhado; os demais estados são exclusivos</i>.</p>
+      <div class="io"><span class="chip">📥 caminho do arquivo</span>➜<span class="chip">📤 AFND preenchido (por referência)</span></div>
+
+      <h3>Entrada usada como exemplo (professor.txt)</h3>
+<pre><span class="s">se</span>                                              <span class="c">← token</span>
+<span class="s">entao</span>                                           <span class="c">← token</span>
+<span class="s">senao</span>                                           <span class="c">← token</span>
+&lt;S&gt; ::= a&lt;A&gt; | e&lt;A&gt; | i&lt;A&gt; | o&lt;A&gt; | u&lt;A&gt;          <span class="c">← gramática (tem ::=)</span>
+&lt;A&gt; ::= a&lt;A&gt; | e&lt;A&gt; | i&lt;A&gt; | o&lt;A&gt; | u&lt;A&gt; | ε      <span class="c">← gramática (tem ::=)</span></pre>
+
+      <h3>Fase A — classificar as linhas</h3>
+<pre><span class="k">para cada</span> linha do arquivo:
+    tira os espaços das pontas (trimString)
+    <span class="k">se</span> vazia, ou começa com "#" ou "//"  → ignora
+    <span class="k">se</span> é do tipo "[ALGO]"                 → marcador de seção (pode mudar o nome do token da GR)
+    <span class="k">se</span> contém "::="                       → PRODUÇÃO de gramática
+                                            (separa o lado esquerdo e as alternativas pelo '|')
+    <span class="k">senão</span>                                 → TOKEN (vai para o vetor tokens)</pre>
+
+      <h3>Fase B — criar o estado inicial</h3>
+<pre><span class="k">int</span> S = automato.adicionarEstado(<span class="s">"S"</span>);
+automato.definirEstadoInicial(S);</pre>
+      <p class="text-sm">A classe auxiliar <code>GeradorNomes</code> gera os próximos nomes A, B, C… (<b>pulando o S</b>, que é reservado) e, quando as letras acabam, q1, q2…</p>
+
+      <h3>Fase C — tokens (um corredor exclusivo por token)</h3>
+<pre><span class="k">para cada</span> token:
+    atual = S
+    <span class="k">para cada</span> caractere c do token:
+        novo = adicionarEstado(próximo nome)   <span class="r">← SEMPRE cria um estado novo</span>
+        adicionarTransicao(atual, c, novo)
+        atual = novo
+    marcarFinal(atual, token)</pre>
+
+      <h3>Fase D — gramática regular</h3>
+<pre>estadosGR = map&lt;string,int&gt;              <span class="c">// "nome do não-terminal" → id do estado</span>
+estadosGR[ primeiro não-terminal ] = S   <span class="c">// o &lt;S&gt; da GR usa o MESMO S (compartilhado)</span>
+<span class="k">para cada</span> outro não-terminal: cria um estado novo
+
+<span class="k">para cada</span> produção, <span class="k">para cada</span> alternativa:
+    "ε"     → marcarFinal(origem, "variavel")
+    "a&lt;A&gt;"  → adicionarTransicao(origem, 'a', estadosGR["&lt;A&gt;"])
+    "a"     → cria um estado final novo e adiciona origem -a-&gt; novo</pre>
+
+      <div class="fig" id="figAFND"></div>
+      <div class="figcap muted">Figura 1 — AFND gerado (14 estados). Círculo duplo = final. <span style="color:#ef4444;font-weight:600">Setas vermelhas</span> = não-determinismo: S com <b>s</b> vai para A e H; S com <b>e</b> vai para C e M.</div>
+
+      <div class="call warn">⚠️ Como o estado criado é <b>sempre novo</b>, <code>se</code> e <code>senao</code> <b>não compartilham</b> o caminho do <code>s</code>. Por isso S tem duas transições com <code>s</code>. <b>É exatamente aí que nasce o não-determinismo.</b></div>
+    </section>
+
+    <!-- ============ 3 LEITOR GRAMATICA ============ -->
+    <section id="s3" class="card">
+      <h2 class="sec"><span class="icon acc">🔁</span>3. LeitorGramatica.cpp — compatibilidade</h2>
+      <span class="path">src/LeitorGramatica.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> nenhuma lógica própria. É um <b>wrapper</b> que só chama <code>carregarArquivo</code>.</p>
+<pre><span class="k">bool</span> carregarGramaticaRegular(...) {
+    <span class="k">return</span> carregarArquivo(caminho, automato);   <span class="c">// apenas repassa</span>
+}</pre>
+      <div class="call ask">🎤 Se o professor perguntar: <i>"é um arquivo legado, mantido por compatibilidade; toda a leitura está centralizada no LeitorArquivo."</i></div>
+    </section>
+
+    <!-- ============ 4 DETERMINIZAR ============ -->
+    <section id="s4" class="card">
+      <h2 class="sec"><span class="icon acc">🔀</span>4. Determinizar.cpp — AFND ➜ AFD</h2>
+      <span class="path">src/Determinizar.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> eliminar o não-determinismo usando a <b>construção de subconjuntos</b>.</p>
+      <div class="io"><span class="chip">📥 AFND</span>➜<span class="chip">📤 novo AFD</span></div>
+      <div class="call info">🧠 <b>A ideia em uma frase:</b> cada estado do AFD representa um <b>conjunto</b> de estados do AFND, ou seja, "todos os lugares onde eu poderia estar".</div>
+
+      <h3>Estruturas de dados (e por que cada uma)</h3>
+      <table class="t">
+        <tr><th>Estrutura</th><th>Para quê</th></tr>
+        <tr><td><code>set&lt;int&gt;</code></td><td>representa um subconjunto. Já vem ordenado e sem repetição, então <code>{A,H}</code> e <code>{H,A}</code> viram a mesma coisa</td></tr>
+        <tr><td><code>map&lt;set&lt;int&gt;, int&gt;</code></td><td>"esse conjunto já virou estado? Qual é o id dele?" Evita criar estados duplicados</td></tr>
+        <tr><td><code>queue&lt;set&lt;int&gt;&gt;</code></td><td>fila dos conjuntos que ainda <b>faltam processar</b> (é uma BFS)</td></tr>
+      </table>
+
+      <h3>Algoritmo</h3>
+<pre>D0 = fecho-ε({S}); cria o estado D0; coloca na fila
+<span class="k">enquanto</span> a fila não estiver vazia:
+    atual = fila.pop()
+    <span class="k">para cada</span> símbolo c do alfabeto (a,e,i,n,o,s,t,u):
+        destino = união de getDestinos(q, c) para cada q em atual
+        <span class="k">se</span> destino vazio → continua   <span class="c">// sem transição; o Erro resolve depois</span>
+        destino = fecho-ε(destino)
+        <span class="k">se</span> destino não está no map → cria novo estado Dn e coloca na fila
+        adicionarTransicao(atual, c, destino)</pre>
+      <p class="text-sm">Ao criar cada estado (lambda <code>criarEstadoAFD</code>): <b>se algum estado do conjunto for final, o novo estado também é final e herda os tokens.</b></p>
+
+      <h3>Execução real com o exemplo</h3>
+      <table class="t c">
+        <tr><th>AFD</th><th>Subconjunto</th><th>Por quê</th><th>Final?</th></tr>
+        <tr><td>D0</td><td>{S}</td><td>ponto de partida</td><td></td></tr>
+        <tr><td>D1</td><td>{M}</td><td>S com a, i, o, u</td><td class="fin">★ variavel</td></tr>
+        <tr><td>D2</td><td>{C, M}</td><td>S com <b>e</b> → C e M</td><td class="fin">★ variavel</td></tr>
+        <tr><td>D3</td><td>{A, H}</td><td>S com <b>s</b> → A e H</td><td></td></tr>
+        <tr><td>D4</td><td>{D}</td><td>D2 com n</td><td></td></tr>
+        <tr><td>D5</td><td>{B, I}</td><td>D3 com e</td><td class="fin">★ se</td></tr>
+        <tr><td>D6</td><td>{E}</td><td>D4 com t</td><td></td></tr>
+        <tr><td>D7</td><td>{J}</td><td>D5 com n</td><td></td></tr>
+        <tr><td>D8</td><td>{F}</td><td>D6 com a</td><td></td></tr>
+        <tr><td>D9</td><td>{K}</td><td>D7 com a</td><td></td></tr>
+        <tr><td>D10</td><td>{G}</td><td>D8 com o</td><td class="fin">★ entao</td></tr>
+        <tr><td>D11</td><td>{L}</td><td>D9 com o</td><td class="fin">★ senao</td></tr>
+      </table>
+      <div class="fig" id="figAFD"></div>
+      <div class="figcap muted">Figura 2 — AFD determinizado (12 estados). Embaixo de cada estado: o subconjunto do AFND que ele representa.</div>
+      <div class="call tip">✅ <b>14 ➜ 12 estados.</b> A partir daqui, cada par (estado, símbolo) tem <b>no máximo um</b> destino.</div>
+      <div class="call warn">📝 <code>fechoEpsilon</code> usa uma <b>pilha</b> para seguir as transições ε. Ele está implementado por completude teórica, mas o leitor <b>não cria transições ε</b>: um <code>ε</code> na gramática apenas marca o estado como final. Então, neste projeto, o fecho sempre devolve o próprio conjunto.</div>
+    </section>
+
+    <!-- ============ 5 MINIMIZAR ============ -->
+    <section id="s5" class="card">
+      <h2 class="sec"><span class="icon acc">🧹</span>5. Minimizar.cpp — remover estados inúteis</h2>
+      <span class="path">src/Minimizar.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> minimizar <b>sem classes de equivalência</b>, ou seja, <b>não junta</b> estados equivalentes; apenas <b>remove</b> dois tipos de estados inúteis.</p>
+      <div class="io"><span class="chip">📥 AFD</span>➜<span class="chip">📤 novo AFD (renomeado M0, M1, …)</span></div>
+      <div class="grid md:grid-cols-2 gap-3 my-3">
+        <div class="call info"><b>🏝️ Inalcançável</b><br>Não existe caminho de q₀ até ele.<br><span class="muted">Detecta com <b>BFS para frente</b> a partir de q₀.</span></div>
+        <div class="call warn"><b>💀 Morto</b><br>Dele não existe caminho até nenhum final.<br><span class="muted">Detecta com <b>BFS reversa</b> a partir dos finais.</span></div>
+      </div>
+      <h3>Passo 1 — alcançáveis (BFS para frente)</h3>
+<pre>alcancavel[q0] = true; fila = [q0]
+<span class="k">enquanto</span> a fila não estiver vazia:
+    atual = fila.pop()
+    <span class="k">para cada</span> transição atual → d:
+        <span class="k">se</span> !alcancavel[d]: marca e coloca na fila</pre>
+      <h3>Passo 2 — vivos (BFS reversa)</h3>
+      <p class="text-sm">O truque é <b>inverter as setas</b>: monta <code>transicoesReversas[destino] → lista de origens</code>. Assim, "quem consegue chegar a um final?" vira "partindo dos finais e andando para trás, quem eu alcanço?".</p>
+<pre>coloca TODOS os finais na fila, já marcados como vivos
+<span class="k">enquanto</span> a fila não estiver vazia:
+    atual = fila.pop()
+    <span class="k">para cada</span> anterior em transicoesReversas[atual]:
+        <span class="k">se</span> !vivo[anterior]: marca e coloca na fila</pre>
+      <h3>Passo 3 — reconstruir</h3>
+<pre>manter[i] = alcancavel[i] &amp;&amp; (vivo[i] || i == inicial)
+<span class="k">para cada</span> estado mantido: cria Mk no novo autômato; mapeamento[i] = k
+copia só as transições cujas DUAS pontas foram mantidas (já traduzidas pelo mapeamento)</pre>
+      <p class="text-sm">O vetor <code>mapeamento</code> funciona como um "de-para": id antigo → id novo (ou -1 se foi removido).</p>
+      <div class="call tip">📊 <b>No exemplo do professor:</b> nada é removido (12 ➜ 12) e D<i>n</i> vira M<i>n</i>.</div>
+      <h3>🧪 Exemplo com remoção (exemplo3_inalcancavel_e_morto.txt)</h3>
+<pre>inicio
+fim
+&lt;S&gt; ::= a&lt;A&gt; | m&lt;M&gt;
+&lt;A&gt; ::= a&lt;A&gt; | ε
+<span class="r">&lt;M&gt; ::= m&lt;M&gt;</span>          <span class="c">← 💀 só fica no laço do "m" e nunca chega a um final (morto)</span>
+<span class="r">&lt;Z&gt; ::= z&lt;Z&gt; | ε</span>      <span class="c">← 🏝️ nenhuma transição chega em Z (inalcançável)</span></pre>
+    </section>
+
+    <!-- ============ 6 COMPLETAR ============ -->
+    <section id="s6" class="card">
+      <h2 class="sec"><span class="icon acc">🚫</span>6. CompletarAutomato.cpp — o estado de erro</h2>
+      <span class="path">src/CompletarAutomato.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> tornar δ uma <b>função total</b>: toda célula da tabela passa a ter um destino.</p>
+      <div class="io"><span class="chip">📥 AFD&amp; (por referência)</span>➜<span class="chip">📤 o mesmo objeto, agora completo</span></div>
+<pre>erro = adicionarEstado("Erro")         <span class="c">// entra como ÚLTIMO estado</span>
+definirEstadoErro(erro)
+<span class="k">para cada</span> estado s (exceto o Erro):
+    <span class="k">para cada</span> símbolo c do alfabeto:
+        <span class="k">se</span> !temTransicao(s, c): adicionarTransicao(s, c, erro)
+<span class="k">para cada</span> símbolo c: adicionarTransicao(erro, c, erro)   <span class="c">// laço: não tem como sair</span></pre>
+      <p class="text-sm">Repare que a função recebe <code>Automato&amp;</code> (<b>por referência</b>): ela <b>modifica</b> o próprio objeto em vez de devolver uma cópia.</p>
+      <h3>Tabela final de transições</h3>
+      <div class="overflow-x-auto" id="tabFinal"></div>
+      <p class="text-xs muted">➜ = inicial · * = final · <span class="err px-1">Erro</span> = célula preenchida pelo <code>completarAFD</code>. Total: 13 estados × 8 símbolos.</p>
+      <div class="call ask">❓ <b>Por que depois da minimização?</b> O Erro nunca alcança um estado final, ou seja, ele é <b>morto por definição</b>. Se fosse criado antes, a minimização o apagaria.</div>
+    </section>
+
+    <!-- ============ 7 VERIFICAR ============ -->
+    <section id="s7" class="card">
+      <h2 class="sec"><span class="icon acc">✅</span>7. VerificarEstados.cpp — a "prova real"</h2>
+      <span class="path">src/VerificarEstados.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> <b>auditar</b> o AFD final e imprimir um relatório. Não altera nada (recebe <code>const Automato&amp;</code>).</p>
+      <p class="text-sm">Ele <b>repete as mesmas duas BFS</b> da minimização (<code>encontrarAlcancaveis</code> e <code>encontrarEstadosQueChegamAoFinal</code>) e confirma que:</p>
+      <ul class="list-disc ml-6 text-sm">
+        <li>não há estados inalcançáveis;</li>
+        <li>não há estados mortos, <b>ignorando o Erro</b> (<code>i != estadoErro</code>), que é morto de propósito.</li>
+      </ul>
+      <div class="call tip">🧮 É como <b>conferir uma conta fazendo de novo</b>: se a minimização funcionou, esse relatório tem que dizer "Nenhum".</div>
+    </section>
+
+    <!-- ============ 8 RECONHECER ============ -->
+    <section id="s8" class="card">
+      <h2 class="sec"><span class="icon acc">🕹️</span>8. Reconhecer.cpp — simular o AFD</h2>
+      <span class="path">src/Reconhecer.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> dizer se uma palavra é aceita e qual token ela representa.</p>
+      <div class="io"><span class="chip">📥 AFD + palavra</span>➜<span class="chip">📤 bool + tokens + rastro</span></div>
+<pre>estado = inicial; rastro = nome(inicial)
+<span class="k">para cada</span> caractere c da palavra:
+    prox = getDestinoAFD(estado, c)
+    <span class="k">se</span> prox == -1        → <span class="r">REJEITA</span> ("sem transição": c nem está no alfabeto)
+    estado = prox; acrescenta " --c--&gt; nome" ao rastro
+    <span class="k">se</span> estado == Erro    → <span class="r">REJEITA</span> (para na hora: do Erro não se sai)
+<span class="k">no fim</span>:
+    <span class="k">se</span> estado é final    → <span class="s">ACEITA</span> e devolve estados[estado].tokens
+    <span class="k">senão</span>                → <span class="r">REJEITA</span> ("estado não-final")</pre>
+      <div class="call info">⚡ É <b>O(n)</b> no tamanho da palavra (fora a busca linear dentro de <code>getDestinoAFD</code>). Esse é o grande ganho do AFD: <b>uma única passada, sem voltar atrás (backtracking)</b>.</div>
+      <table class="t">
+        <tr><th>Entrada</th><th>Caminho</th><th>Resultado</th></tr>
+        <tr><td><code>senao</code></td><td>M0 -s→ M3 -e→ M5 -n→ M7 -a→ M9 -o→ M11</td><td class="fin">✅ senao</td></tr>
+        <tr><td><code>se</code></td><td>M0 -s→ M3 -e→ M5</td><td class="fin">✅ se</td></tr>
+        <tr><td><code>entao</code></td><td>M0 -e→ M2 -n→ M4 -t→ M6 -a→ M8 -o→ M10</td><td class="fin">✅ entao</td></tr>
+        <tr><td><code>aeiou</code></td><td>M0 -a→ M1 -e→ M1 -i→ M1 -o→ M1 -u→ M1</td><td class="fin">✅ variavel</td></tr>
+        <tr><td><code>sen</code></td><td>M0 → M3 → M5 → M7</td><td style="color:#dc2626">❌ M7 não é final</td></tr>
+        <tr><td><code>st</code></td><td>M0 -s→ M3 -t→ Erro</td><td style="color:#dc2626">❌ caiu no Erro</td></tr>
+        <tr><td><code>xyz</code></td><td>M0 -x→ ?</td><td style="color:#dc2626">❌ <code>x</code> não está no alfabeto</td></tr>
+      </table>
+    </section>
+
+    <!-- ============ 9 MAIN ============ -->
+    <section id="s9" class="card">
+      <h2 class="sec"><span class="icon acc">🎼</span>9. main.cpp — o maestro</h2>
+      <span class="path">src/main.cpp</span>
+      <p class="resp"><b>Responsabilidade:</b> não implementa nenhum algoritmo; só <b>chama as etapas em ordem</b> e imprime as tabelas entre elas.</p>
+<pre>carregarArquivo(caminho, afnd, <span class="s">"variavel"</span>);     <span class="c">// ETAPA 1</span>
+Automato afd           = determinizar(afnd);    <span class="c">// ETAPA 2</span>
+Automato afdMinimizado = minimizarAFD(afd);     <span class="c">// ETAPA 3</span>
+Automato afdFinal = afdMinimizado;
+completarAFD(afdFinal);                          <span class="c">// ETAPA 4</span>
+verificarEstados(afdFinal);
+<span class="k">while</span> (getline(cin, palavra)) reconhecerComRastro(...);  <span class="c">// ETAPA 5 (loop até "sair")</span></pre>
+      <ul class="list-disc ml-6 text-sm">
+        <li><code>argv[1]</code> permite escolher outro arquivo de entrada. O padrão é <code>exemplos/professor.txt</code>, com <code>exemplos/entrada.txt</code> como alternativa se ele não for encontrado.</li>
+        <li>Antes de reconhecer, a entrada é limpa: remove <code>\r</code> (quebra de linha do Windows), espaços e tabs das pontas.</li>
+        <li>Cada etapa gera um <b>objeto novo</b>, então dá para imprimir o "antes" e o "depois" de cada uma.</li>
+      </ul>
+    </section>
+
+    <!-- ============ 10 APOIO ============ -->
+    <section id="s10" class="card">
+      <h2 class="sec"><span class="icon acc">🧰</span>10. Arquivos de apoio</h2>
+      <table class="t">
+        <tr><th>Arquivo</th><th>Função</th></tr>
+        <tr><td>⚙️ <code>Makefile</code></td><td><code>make</code> compila com <code>g++ -std=c++17</code> (cada .cpp vira um .o em <code>obj/</code>, depois tudo é linkado em <code>projeto</code>); <code>make run</code> executa com o professor.txt; <code>make clean</code> apaga o que foi gerado</td></tr>
+        <tr><td>🧪 <code>exemplos/*.txt</code></td><td>casos de teste: o do professor, operadores/dígitos, prefixos concorrentes (<code>in</code>/<code>int</code>/<code>if</code>) e inalcançável/morto</td></tr>
+        <tr><td>📑 <code>relatorio/</code></td><td>relatório em .md, .docx e .pdf</td></tr>
+        <tr><td>🐍 <code>gerar_documentos.py</code></td><td>script que gera o .docx/.pdf do relatório; não faz parte do programa C++</td></tr>
+        <tr><td>▶️ <code>projeto</code></td><td>executável já compilado</td></tr>
+      </table>
+    </section>
+
+    <!-- ============ 11 PONTOS ============ -->
+    <section id="s11" class="card">
+      <h2 class="sec"><span class="icon acc">🎯</span>11. Pontos técnicos que o professor pode explorar</h2>
+      <p class="text-sm muted">Clique em cada pergunta para ver a resposta.</p>
+      <details><summary>1. Por que <code>getDestinoAFD</code> é lento?</summary><p class="text-sm mt-2">Ele faz uma <b>busca linear</b> em todas as transições, ou seja, O(T) por consulta. Uma matriz <code>tabela[estado][simbolo]</code> daria O(1). Para o tamanho dos exemplos, não faz diferença.</p></details>
+      <details><summary>2. O que conta como épsilon?</summary><p class="text-sm mt-2"><code>isEpsilon</code> aceita <code>ε</code>, <code>&amp;</code>, <code>eps</code>, <code>epsilon</code> e também <code>"E"</code>. Consequência: uma alternativa formada só pela letra <b>E maiúscula</b> seria interpretada como ε, não como terminal.</p></details>
+      <details><summary>3. Por que a palavra <code>e</code> é aceita como <code>variavel</code>?</summary><p class="text-sm mt-2">Porque D2 = {C, M} contém M, que é final. É o comportamento correto: <code>e</code> é uma vogal, e a gramática aceita uma ou mais vogais.</p></details>
+      <details><summary>4. Por que inalcançáveis quase nunca aparecem na minimização?</summary><p class="text-sm mt-2">Porque a determinização já parte de {S} e só cria conjuntos alcançáveis (o &lt;Z&gt; do exemplo 3 some ali). A BFS da minimização funciona como garantia formal.</p></details>
+      <details><summary>5. O estado inicial pode ser removido?</summary><p class="text-sm mt-2">Não. A condição <code>i != inicial</code> o mantém mesmo que esteja morto, para o AFD continuar tendo um estado inicial válido.</p></details>
+      <details><summary>6. O que acontece com um caractere fora do alfabeto?</summary><p class="text-sm mt-2">Ele não passa pelo Erro: <code>getDestinoAFD</code> devolve <code>-1</code> e a palavra é rejeitada com "sem transição". O resultado é o mesmo (rejeição), só muda a mensagem.</p></details>
+      <details><summary>7. Por que o Erro não aparece como morto no relatório?</summary><p class="text-sm mt-2">Porque o <code>VerificarEstados</code> ignora explicitamente o estado de erro (<code>i != estadoErro</code>), já que ele é morto de propósito.</p></details>
+    </section>
+  </main>
+</div>
+
+<script>
+// ---------- dados reais do AFD final ----------
+const ALF = ['a','e','i','n','o','s','t','u'];
+const delta = {0:{s:3,e:2,a:1,i:1,o:1,u:1},1:{a:1,e:1,i:1,o:1,u:1},2:{a:1,e:1,i:1,o:1,u:1,n:4},
+  3:{e:5},4:{t:6},5:{n:7},6:{a:8},7:{a:9},8:{o:10},9:{o:11},10:{},11:{}};
+const finals = {1:'variavel',2:'variavel',5:'se',10:'entao',11:'senao'};
+const subsets = {0:'S',1:'M',2:'C,M',3:'A,H',4:'D',5:'B,I',6:'E',7:'J',8:'F',9:'K',10:'G',11:'L'};
+
+// ---------- tabela final ----------
+let h = '<table class="t c"><tr><th>δ</th>' + ALF.map(c=>`<th>${c}</th>`).join('') + '<th>token</th></tr>';
+for (let s=0;s<=11;s++){
+  h += `<tr><td><b>${s===0?'➜ ':''}${finals[s]?'*':''}M${s}</b></td>` +
+    ALF.map(c=> delta[s][c]!==undefined ? `<td>M${delta[s][c]}</td>` : `<td class="err">Erro</td>`).join('') +
+    `<td class="fin">${finals[s]||''}</td></tr>`;
+}
+h += '<tr><td><b>Erro</b></td>' + ALF.map(()=>'<td class="err">Erro</td>').join('') + '<td></td></tr></table>';
+document.getElementById('tabFinal').innerHTML = h;
+
+// ---------- desenho de grafos ----------
+function graph(nodes, edges, H){
+  const R=20,P={}; nodes.forEach(n=>P[n.id]=n);
+  let s=`<svg viewBox="0 0 760 ${H}" style="width:100%;height:auto"><defs>
+   <marker id="a1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#64748b"/></marker>
+   <marker id="a2" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#ef4444"/></marker></defs>`;
+  const st=nodes[0]; s+=`<g class="ed"><path d="M${st.x-45},${st.y} L${st.x-R-2},${st.y}" marker-end="url(#a1)"/></g>`;
+  edges.forEach(e=>{
+    const a=P[e.f],b=P[e.t],cl='ed'+(e.x?' x':''),mk=e.x?'url(#a2)':'url(#a1)';
+    if(e.f===e.t){const d=e.below?1:-1;
+      s+=`<g class="${cl}"><path d="M${a.x-10},${a.y+d*17} C${a.x-35},${a.y+d*65} ${a.x+35},${a.y+d*65} ${a.x+10},${a.y+d*17}" marker-end="${mk}"/><text x="${a.x+30}" y="${a.y+d*52}">${e.l}</text></g>`;return;}
+    const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);
+    const x1=a.x+dx/L*R,y1=a.y+dy/L*R,x2=b.x-dx/L*(R+2),y2=b.y-dy/L*(R+2);
+    s+=`<g class="${cl}"><path d="M${x1},${y1} L${x2},${y2}" marker-end="${mk}"/><text x="${(x1+x2)/2+(e.ox||0)}" y="${(y1+y2)/2+(e.oy===undefined?-6:e.oy)}" text-anchor="middle">${e.l}</text></g>`;
+  });
+  nodes.forEach(n=>{
+    s+=`<g class="nd ${n.fin?'f':''}"><circle cx="${n.x}" cy="${n.y}" r="${R}"/>${n.fin?`<circle class="o" cx="${n.x}" cy="${n.y}" r="${R-4}"/>`:''}
+    <text x="${n.x}" y="${n.y+4}" text-anchor="middle">${n.l}</text>${n.sub?`<text class="sub" x="${n.x}" y="${n.y+R+15}" text-anchor="middle">${n.sub}</text>`:''}</g>`;
+  });
+  return s+'</svg>';
+}
+
+document.getElementById('figAFND').innerHTML = graph([
+  {id:'S',x:50,y:180,l:'S'},
+  {id:'A',x:170,y:50,l:'A'},{id:'B',x:290,y:50,l:'B',fin:1,sub:'★se'},
+  {id:'H',x:170,y:130,l:'H'},{id:'I',x:290,y:130,l:'I'},{id:'J',x:410,y:130,l:'J'},{id:'K',x:530,y:130,l:'K'},{id:'L',x:650,y:130,l:'L',fin:1,sub:'★senao'},
+  {id:'C',x:170,y:230,l:'C'},{id:'D',x:290,y:230,l:'D'},{id:'E',x:410,y:230,l:'E'},{id:'F',x:530,y:230,l:'F'},{id:'G',x:650,y:230,l:'G',fin:1,sub:'★entao'},
+  {id:'M',x:170,y:315,l:'M',fin:1}
+],[
+  {f:'S',t:'A',l:'s',x:1,ox:-10},{f:'A',t:'B',l:'e'},
+  {f:'S',t:'H',l:'s',x:1,oy:-8},{f:'H',t:'I',l:'e'},{f:'I',t:'J',l:'n'},{f:'J',t:'K',l:'a'},{f:'K',t:'L',l:'o'},
+  {f:'S',t:'C',l:'e',x:1,oy:16},{f:'C',t:'D',l:'n'},{f:'D',t:'E',l:'t'},{f:'E',t:'F',l:'a'},{f:'F',t:'G',l:'o'},
+  {f:'S',t:'M',l:'e,a,i,o,u',x:0,ox:-38,oy:10},{f:'M',t:'M',l:'a,e,i,o,u (★variavel)'}
+], 370);
+
+const PA={0:[50,180],3:[170,60],5:[290,60],7:[410,60],9:[530,60],11:[650,60],2:[170,180],4:[290,180],6:[410,180],8:[530,180],10:[650,180],1:[170,300]};
+document.getElementById('figAFD').innerHTML = graph(
+  Object.keys(PA).map(Number).sort((a,b)=>a-b).map(k=>({id:k,x:PA[k][0],y:PA[k][1],l:'D'+k,fin:!!finals[k],sub:'{'+subsets[k]+'}'+(finals[k]?' ★'+finals[k]:'')})),
+  [{f:0,t:3,l:'s',ox:-8},{f:3,t:5,l:'e'},{f:5,t:7,l:'n'},{f:7,t:9,l:'a'},{f:9,t:11,l:'o'},
+   {f:0,t:2,l:'e'},{f:2,t:4,l:'n'},{f:4,t:6,l:'t'},{f:6,t:8,l:'a'},{f:8,t:10,l:'o'},
+   {f:0,t:1,l:'a,i,o,u',ox:-30,oy:0},{f:2,t:1,l:'a,e,i,o,u',ox:40,oy:0},{f:1,t:1,l:'a,e,i,o,u',below:true}],
+  370);
+
+// ---------- destaque da seção atual no sumário ----------
+const links=[...document.querySelectorAll('#nav a')];
+const obs=new IntersectionObserver(es=>es.forEach(e=>{ if(e.isIntersecting){ links.forEach(l=>l.classList.toggle('on', l.getAttribute('href')==='#'+e.target.id)); } }),{rootMargin:'-30% 0px -60% 0px'});
+document.querySelectorAll('main section').forEach(s=>obs.observe(s));
+</script>
+</body>
+</html>
